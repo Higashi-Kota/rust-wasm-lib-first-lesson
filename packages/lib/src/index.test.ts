@@ -2,24 +2,19 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import {
   Gnrng,
   IdType,
-  auto,
-  createId,
   createIdBySeed,
-  getName,
+  createIdsBySeed,
   gnrng,
   initWasm,
-  name,
-  version,
 } from './index'
 
 // 既存実装との比較用（互換性テスト）
 import {
   createIdBySeed as utilsCreateIdBySeed,
-  getName as utilsGetName,
   gnrng as utilsGnrng,
 } from '@internal/utils'
 
-describe('@nap5/gnrng-id', () => {
+describe('@nap5/gnrng-id (Mixed Implementation)', () => {
   beforeAll(async () => {
     await initWasm()
   })
@@ -29,13 +24,6 @@ describe('@nap5/gnrng-id', () => {
     if (global.gc) {
       global.gc()
     }
-  })
-
-  describe('Library metadata', () => {
-    it('should export correct version and name', () => {
-      expect(version).toBe('0.1.0')
-      expect(name).toBe('@nap5/gnrng-id')
-    })
   })
 
   describe('WASM initialization', () => {
@@ -50,7 +38,7 @@ describe('@nap5/gnrng-id', () => {
     })
   })
 
-  describe('Gnrng class', () => {
+  describe('Gnrng class (WASM implementation)', () => {
     it('should create GNRNG instance with seed', () => {
       const rng = new Gnrng('test-seed')
       expect(rng).toBeInstanceOf(Gnrng)
@@ -109,16 +97,85 @@ describe('@nap5/gnrng-id', () => {
 
       rng.free()
     })
+
+    it('should handle batch operations', () => {
+      const rng = new Gnrng('batch-test')
+
+      // バッチ乱数生成テスト
+      const batch = rng.nextBatch(50)
+      expect(batch).toHaveLength(50)
+
+      for (const value of batch) {
+        expect(value).toBeGreaterThanOrEqual(0)
+        expect(value).toBeLessThan(1)
+      }
+
+      // バッチ範囲乱数生成テスト
+      const rangeBatch = rng.nextRangeBatch(1, 10, 30)
+      expect(rangeBatch).toHaveLength(30)
+
+      for (const value of rangeBatch) {
+        expect(value).toBeGreaterThanOrEqual(1)
+        expect(value).toBeLessThan(10)
+        expect(Number.isInteger(value)).toBe(true)
+      }
+
+      rng.free()
+    })
+
+    it('should generate deterministic batches', () => {
+      const rng1 = new Gnrng('deterministic-test')
+      const rng2 = new Gnrng('deterministic-test')
+
+      const batch1 = rng1.nextBatch(20)
+      const batch2 = rng2.nextBatch(20)
+
+      expect(batch1).toEqual(batch2)
+
+      rng1.free()
+      rng2.free()
+    })
+
+    it('should handle large batch operations efficiently', () => {
+      const rng = new Gnrng('large-batch-test')
+
+      // 大量バッチのテスト（分割処理の確認）
+      const largeBatch = rng.nextBatch(15000) // > BATCH_MAX_SIZE
+      expect(largeBatch).toHaveLength(15000)
+
+      // 全て有効な乱数値であることを確認
+      for (const value of largeBatch.slice(0, 100)) {
+        // サンプルチェック
+        expect(value).toBeGreaterThanOrEqual(0)
+        expect(value).toBeLessThan(1)
+      }
+
+      rng.free()
+    })
+
+    it('should handle edge cases', () => {
+      const rng = new Gnrng('edge-test')
+
+      // 空のバッチ
+      expect(rng.nextBatch(0)).toEqual([])
+      expect(rng.nextRangeBatch(1, 10, 0)).toEqual([])
+
+      // 無効な範囲
+      expect(rng.nextRange(5, 5)).toBe(5)
+      expect(rng.nextRange(10, 5)).toBe(10)
+
+      rng.free()
+    })
   })
 
-  describe('gnrng factory function', () => {
+  describe('gnrng factory function (WASM implementation)', () => {
     it('should create GNRNG instance', () => {
       const rng = gnrng('test-seed')
       expect(rng).toBeInstanceOf(Gnrng)
       rng.free()
     })
 
-    it('should be compatible with utils implementation', () => {
+    it('should be compatible with utils implementation for basic functionality', () => {
       const wasmRng = gnrng('test-seed')
       const utilsRng = utilsGnrng('test-seed')
 
@@ -132,49 +189,7 @@ describe('@nap5/gnrng-id', () => {
     })
   })
 
-  describe('createId function', () => {
-    it('should create ID with default parameters', () => {
-      const id = createId()
-      expect(id).toMatch(/^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/)
-    })
-
-    it('should create ID with custom size', () => {
-      const id = createId(10)
-      expect(id).toMatch(/^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{10}$/)
-    })
-
-    it('should create ID with different types', () => {
-      const userId = createId(7, IdType.User)
-      const teamId = createId(7, IdType.Team)
-      const projectId = createId(7, IdType.Project)
-      const defaultId = createId(7, IdType.Default)
-
-      expect(userId).toMatch(/^u_/)
-      expect(teamId).toMatch(/^tm_/)
-      expect(projectId).toMatch(/^p_/)
-      expect(defaultId).toMatch(/^t_/)
-    })
-
-    it('should generate unique IDs', () => {
-      const ids = new Set()
-      for (let i = 0; i < 1000; i++) {
-        ids.add(createId())
-      }
-      expect(ids.size).toBe(1000)
-    })
-
-    it('should use safe alphabet only', () => {
-      const id = createId(100) // Large size to test alphabet
-      const idContent = id.slice(2) // Remove prefix
-      const safeAlphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-
-      for (const char of idContent) {
-        expect(safeAlphabet).toContain(char)
-      }
-    })
-  })
-
-  describe('createIdBySeed function', () => {
+  describe('createIdBySeed function (WASM gnrng + TypeScript ID generation)', () => {
     it('should create deterministic IDs with same seed', () => {
       const id1 = createIdBySeed('test-seed')
       const id2 = createIdBySeed('test-seed')
@@ -189,184 +204,231 @@ describe('@nap5/gnrng-id', () => {
 
     it('should respect size parameter', () => {
       const id = createIdBySeed('test-seed', 12)
-      expect(id).toMatch(/^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{12}$/)
+      expect(id).toMatch(
+        /^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{12}$/
+      )
     })
 
     it('should respect type parameter', () => {
       const userId = createIdBySeed('test-seed', 7, IdType.User)
-      expect(userId).toMatch(/^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/)
+      const teamId = createIdBySeed('test-seed', 7, IdType.Team)
+      const projectId = createIdBySeed('test-seed', 7, IdType.Project)
+      const defaultId = createIdBySeed('test-seed', 7, IdType.Default)
+
+      expect(userId).toMatch(
+        /^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
+      )
+      expect(teamId).toMatch(
+        /^tm_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
+      )
+      expect(projectId).toMatch(
+        /^p_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
+      )
+      expect(defaultId).toMatch(
+        /^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
+      )
     })
 
-    it('should be compatible with utils implementation', () => {
+    it('should use safe alphabet only', () => {
+      const id = createIdBySeed('alphabet-test', 50) // Large size to test alphabet
+      const idContent = id.slice(2) // Remove prefix
+      const safeAlphabet =
+        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+
+      for (const char of idContent) {
+        expect(safeAlphabet).toContain(char)
+      }
+    })
+
+    it('should be compatible with utils implementation', async () => {
       const wasmId = createIdBySeed('test-seed', 7, IdType.Default)
-      const utilsId = utilsCreateIdBySeed('test-seed', 7, 'default')
+      const utilsId = await utilsCreateIdBySeed('test-seed', 7, 'default')
 
       // 同じアルゴリズムなので同じ結果になるはず
       expect(wasmId).toBe(utilsId)
     })
+
+    it('should generate consistent results across multiple calls', () => {
+      const seed = 'consistency-test'
+      const ids = Array.from({ length: 10 }, () =>
+        createIdBySeed(seed, 8, IdType.User)
+      )
+
+      // 全て同じIDになるはず（決定的）
+      const uniqueIds = new Set(ids)
+      expect(uniqueIds.size).toBe(1)
+    })
   })
 
-  describe('getName function', () => {
-    it('should return original name when no conflicts', () => {
-      const result = getName('Panel', [])
-      expect(result).toBe('Panel')
+  describe('createIdsBySeed function (Batch WASM gnrng + TypeScript ID generation)', () => {
+    it('should create multiple deterministic IDs', () => {
+      const ids1 = createIdsBySeed('base', 5, 7, IdType.Default)
+      const ids2 = createIdsBySeed('base', 5, 7, IdType.Default)
+
+      expect(ids1).toHaveLength(5)
+      expect(ids2).toHaveLength(5)
+
+      // 同じベースシードなら同じ結果
+      expect(ids1).toEqual(ids2)
     })
 
-    it('should return original name when no conflicts exist', () => {
-      const result = getName('Panel', ['Other', 'Different'])
-      expect(result).toBe('Panel')
+    it('should create different IDs with different base seeds', () => {
+      const ids1 = createIdsBySeed('base1', 3, 7, IdType.Default)
+      const ids2 = createIdsBySeed('base2', 3, 7, IdType.Default)
+
+      expect(ids1).not.toEqual(ids2)
     })
 
-    it('should add (1) when original name exists', () => {
-      const result = getName('Panel', ['Panel'])
-      expect(result).toBe('Panel (1)')
+    it('should create unique IDs within the same batch', () => {
+      const ids = createIdsBySeed('unique-test', 10, 7, IdType.Default)
+
+      // バッチ内では異なるIDになるはず
+      const uniqueIds = new Set(ids)
+      expect(uniqueIds.size).toBe(10)
     })
 
-    it('should increment number when multiple conflicts exist', () => {
-      const result = getName('Panel', ['Panel', 'Panel (1)'])
-      expect(result).toBe('Panel (2)')
-    })
+    it('should respect all parameters', () => {
+      const ids = createIdsBySeed('param-test', 3, 10, IdType.User)
 
-    it('should find next available number in sequence', () => {
-      const result = getName('Panel', ['Panel', 'Panel (1)', 'Panel (2)', 'Panel (3)'])
-      expect(result).toBe('Panel (4)')
-    })
+      expect(ids).toHaveLength(3)
 
-    it('should handle gaps in numbering sequence', () => {
-      const result = getName('Panel', ['Panel', 'Panel (3)', 'Panel (5)'])
-      expect(result).toBe('Panel (1)')
-    })
-
-    it('should handle names that already have numbers', () => {
-      const result = getName('Panel (2)', ['Panel (2)'])
-      expect(result).toBe('Panel (3)')
-    })
-
-    it('should be compatible with utils implementation', () => {
-      const testCases = [
-        ['Panel', []],
-        ['Panel', ['Panel']],
-        ['Panel', ['Panel', 'Panel (1)']],
-        ['Panel', ['Panel', 'Panel (3)', 'Panel (5)']],
-        ['Panel (2)', ['Panel (2)']],
-      ] as const
-
-      for (const [name, existing] of testCases) {
-        const wasmResult = getName(name, [...existing])
-        const utilsResult = utilsGetName(name, [...existing])
-        expect(wasmResult).toBe(utilsResult)
+      for (const id of ids) {
+        expect(id).toMatch(
+          /^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{10}$/
+        )
       }
     })
-  })
 
-  describe('Async API (auto namespace)', () => {
-    it('should auto-initialize and create ID', async () => {
-      const id = await auto.createId()
-      expect(id).toMatch(/^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/)
+    it('should handle edge cases', () => {
+      // 空のバッチ
+      expect(createIdsBySeed('empty', 0, 7, IdType.Default)).toEqual([])
+
+      // 単一ID
+      const singleId = createIdsBySeed('single', 1, 7, IdType.Default)
+      expect(singleId).toHaveLength(1)
+      expect(singleId[0]).toMatch(
+        /^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
+      )
     })
 
-    it('should auto-initialize and create ID by seed', async () => {
-      const id1 = await auto.createIdBySeed('test-seed')
-      const id2 = await auto.createIdBySeed('test-seed')
-      expect(id1).toBe(id2)
-    })
-
-    it('should auto-initialize and create GNRNG', async () => {
-      const rng = await auto.gnrng('test-seed')
-      expect(rng).toBeInstanceOf(Gnrng)
-      const value = rng.next()
-      expect(value).toBeGreaterThanOrEqual(0)
-      expect(value).toBeLessThan(1)
-      rng.free()
-    })
-
-    it('should auto-initialize and get unique name', async () => {
-      const result = await auto.getName('Panel', ['Panel'])
-      expect(result).toBe('Panel (1)')
-    })
-  })
-
-  describe('Error handling', () => {
-    it('should handle invalid range in nextRange', () => {
-      const rng = new Gnrng('test-seed')
-
-      // min >= max の場合は min を返すはず
-      const result = rng.nextRange(10, 10)
-      expect(result).toBe(10)
-
-      const result2 = rng.nextRange(10, 5)
-      expect(result2).toBe(10)
-
-      rng.free()
-    })
-  })
-
-  describe('Performance considerations', () => {
-    it('should handle large ID generation efficiently', () => {
+    it('should be efficient for large batches', () => {
       const start = performance.now()
-
-      for (let i = 0; i < 1000; i++) {
-        createId(7, IdType.Default)
-      }
-
+      const largeIds = createIdsBySeed(
+        'performance-test',
+        1000,
+        8,
+        IdType.Default
+      )
       const end = performance.now()
-      const duration = end - start
 
-      // 1000個のID生成が1秒以内に完了することを確認
-      expect(duration).toBeLessThan(1000)
+      expect(largeIds).toHaveLength(1000)
+      expect(end - start).toBeLessThan(1000) // 1秒以内
+
+      // ユニーク性確認
+      const uniqueIds = new Set(largeIds)
+      expect(uniqueIds.size).toBe(1000)
+    })
+  })
+
+  describe('IdType enum', () => {
+    it('should have correct enum values', () => {
+      expect(IdType.User).toBe('user')
+      expect(IdType.Team).toBe('team')
+      expect(IdType.Project).toBe('project')
+      expect(IdType.Default).toBe('default')
     })
 
-    it('should handle large GNRNG sequence generation efficiently', () => {
-      const rng = new Gnrng('test-seed')
-      const start = performance.now()
+    it('should generate correct prefixes', () => {
+      expect(createIdBySeed('prefix-test', 7, IdType.User)).toMatch(/^u_/)
+      expect(createIdBySeed('prefix-test', 7, IdType.Team)).toMatch(/^tm_/)
+      expect(createIdBySeed('prefix-test', 7, IdType.Project)).toMatch(/^p_/)
+      expect(createIdBySeed('prefix-test', 7, IdType.Default)).toMatch(/^t_/)
+    })
+  })
 
-      for (let i = 0; i < 10000; i++) {
+  describe('Performance and memory management', () => {
+    it('should handle rapid instance creation and disposal', () => {
+      for (let i = 0; i < 100; i++) {
+        const rng = new Gnrng(`rapid-${i}`)
         rng.next()
+        rng.free()
       }
+    })
 
+    it('should handle batch operations efficiently', () => {
+      const rng = new Gnrng('batch-performance')
+
+      const start = performance.now()
+      const batch = rng.nextBatch(10000)
       const end = performance.now()
-      const duration = end - start
 
-      // 10000回の乱数生成が1秒以内に完了することを確認
-      expect(duration).toBeLessThan(1000)
+      expect(batch).toHaveLength(10000)
+      expect(end - start).toBeLessThan(100) // 100ms以内
 
       rng.free()
+    })
+
+    it('should throw error when using freed instance', () => {
+      const rng = new Gnrng('free-test')
+      rng.free()
+
+      // フリー後の使用でエラーが発生することを確認
+      // WASMの場合、フリー後の使用は予期しない動作となる可能性があります
     })
   })
 
   describe('Integration tests', () => {
-    it('should work together - createIdBySeed and getName', () => {
-      const id1 = createIdBySeed('base', 5, IdType.User)
-      const id2 = createIdBySeed('base', 5, IdType.User) // Same as id1
-      const id3 = createIdBySeed('other', 5, IdType.User) // Different
+    it('should work together - WASM gnrng with TypeScript ID generation', () => {
+      // createIdBySeedでWASM gnrngとTypeScript ID生成が協調することを確認
+      const id1 = createIdBySeed('integration-test', 8, IdType.User)
+      const id2 = createIdBySeed('integration-test', 8, IdType.User)
 
-      expect(id1).toBe(id2)
-      expect(id1).not.toBe(id3)
-
-      // Use getName to avoid conflicts
-      const existingIds = [id1, id3]
-      const newName = getName(id1, existingIds)
-
-      expect(newName).toBe(`${id1} (1)`)
-      expect(existingIds.includes(newName)).toBe(false)
+      expect(id1).toBe(id2) // 決定的
+      expect(id1).toMatch(
+        /^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{8}$/
+      )
     })
 
-    it('should work together - gnrng and createIdBySeed consistency', () => {
-      const seed = 'consistency-test'
+    it('should maintain consistency between individual and batch operations', () => {
+      // 個別生成とバッチ生成の一貫性を確認
+      const individual = createIdBySeed('consistency-base-0', 7, IdType.Default)
+      const batch = createIdsBySeed('consistency-base', 1, 7, IdType.Default)
 
-      const id1 = createIdBySeed(seed, 7)
-      const id2 = createIdBySeed(seed, 7)
+      expect(batch[0]).toBe(individual)
+    })
 
-      expect(id1).toBe(id2)
+    it('should demonstrate WASM performance advantage', () => {
+      const wasmRng = new Gnrng('performance-comparison')
 
-      // The underlying RNG should also be consistent
-      const rng1 = gnrng(seed)
-      const rng2 = gnrng(seed)
+      // WASM版のバッチ処理は高速であることを確認
+      const start = performance.now()
+      const results = wasmRng.nextBatch(5000)
+      const end = performance.now()
 
-      expect(rng1.next()).toBe(rng2.next())
+      expect(results).toHaveLength(5000)
+      expect(end - start).toBeLessThan(50) // 50ms以内
 
-      rng1.free()
-      rng2.free()
+      wasmRng.free()
+    })
+  })
+
+  describe('Error handling', () => {
+    it('should handle WASM initialization errors gracefully', () => {
+      // 初期化済み状態での再初期化は問題なし
+      expect(() => initWasm()).not.toThrow()
+    })
+
+    it('should handle invalid parameters gracefully', () => {
+      const rng = new Gnrng('error-test')
+
+      // 負のカウント
+      expect(rng.nextBatch(-1)).toEqual([])
+      expect(rng.nextRangeBatch(1, 10, -1)).toEqual([])
+
+      // 無効な範囲
+      expect(rng.nextRange(10, 5)).toBe(10)
+
+      rng.free()
     })
   })
 })

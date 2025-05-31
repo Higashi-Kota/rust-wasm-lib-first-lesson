@@ -1,19 +1,16 @@
 /**
  * @nap5/gnrng-id
  * GNRNG (Good Night Random Number Generator) with ID generation utilities powered by WebAssembly
+ *
+ * Architecture:
+ * - GNRNG: WASM implementation (high-performance)
+ * - ID Generation: TypeScript implementation (compatibility with @internal/utils)
  */
 
-import init, {
-  Gnrng as WasmGnrng,
-  IdType as WasmIdType,
-  create_id as wasmCreateId,
-  create_id_by_seed as wasmCreateIdBySeed,
-  create_ids as wasmCreateIds,
-  create_ids_by_seed as wasmCreateIdsBySeed,
-  create_deterministic_ids_by_seed as wasmCreateDeterministicIdsBySeed,
-  get_unique_name as wasmGetUniqueName,
-  get_unique_names as wasmGetUniqueNames,
-} from '@nap5/gnrng-id-wasm'
+import init, { Gnrng as WasmGnrng } from '@nap5/gnrng-id-wasm'
+
+// TypeScript implementations from @internal/utils for compatibility
+import { customRandom } from 'nanoid'
 
 // WASMモジュールの初期化状態を管理
 let wasmInitialized = false
@@ -32,6 +29,10 @@ const OPTIMIZATION_THRESHOLDS = {
   /** 名前生成バッチ処理閾値 */
   NAME_BATCH_THRESHOLD: 5,
 } as const
+
+// TypeScript ID generation constants (from @internal/utils)
+const AVAILABLE_ALPHABET =
+  '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 /**
  * WASMモジュールを初期化する
@@ -75,25 +76,25 @@ export enum IdType {
 }
 
 /**
- * TypeScript IdType を WASM IdType に変換
+ * プレフィックスを取得
  */
-function convertIdType(type: IdType): WasmIdType {
+function getPrefix(type: IdType): string {
   switch (type) {
     case IdType.User:
-      return WasmIdType.User
+      return 'u_'
     case IdType.Team:
-      return WasmIdType.Team
+      return 'tm_'
     case IdType.Project:
-      return WasmIdType.Project
+      return 'p_'
     case IdType.Default:
-      return WasmIdType.Default
+      return 't_'
     default:
-      return WasmIdType.Default
+      return 't_'
   }
 }
 
 /**
- * 🚀 GNRNG (Good Night Random Number Generator) クラス - バッチ最適化版
+ * 🚀 GNRNG (Good Night Random Number Generator) クラス - WASM実装
  * シードベースの決定的な疑似乱数生成器
  */
 export class Gnrng {
@@ -197,7 +198,7 @@ export class Gnrng {
 }
 
 /**
- * シードから GNRNG インスタンスを作成
+ * シードから GNRNG インスタンスを作成（WASM実装）
  * @param seed シード文字列
  * @returns GNRNG インスタンス
  */
@@ -206,93 +207,7 @@ export function gnrng(seed: string): Gnrng {
 }
 
 /**
- * 非同期版: シードから GNRNG インスタンスを作成
- */
-export async function gnrngAsync(seed: string): Promise<Gnrng> {
-  await initWasm()
-  return new Gnrng(seed)
-}
-
-/**
- * ランダムな ID を生成
- * @param size ID のサイズ（デフォルト: 7）
- * @param type ID のタイプ（デフォルト: Default）
- * @returns 生成された ID
- */
-export function createId(size = 7, type: IdType = IdType.Default): string {
-  ensureWasmInitialized()
-  return wasmCreateId(size, convertIdType(type))
-}
-
-/**
- * 🚀 バッチID生成: 複数のランダムIDを高速一括生成
- * @param count 生成するIDの個数
- * @param size ID のサイズ（デフォルト: 7）
- * @param type ID のタイプ（デフォルト: Default）
- * @returns 生成されたIDの配列
- */
-export function createIds(
-  count: number,
-  size = 7,
-  type: IdType = IdType.Default
-): string[] {
-  ensureWasmInitialized()
-
-  if (count <= 0) return []
-  if (count === 1) {
-    // 単体の場合は個別関数を使用（最適化）
-    return [wasmCreateId(size, convertIdType(type))]
-  }
-  if (count > OPTIMIZATION_THRESHOLDS.BATCH_MAX_SIZE) {
-    // 大量処理時は分割して処理
-    return createIdsChunked(count, size, type)
-  }
-
-  return wasmCreateIds(count, size, convertIdType(type))
-}
-
-/**
- * 大量ID生成を分割処理
- */
-function createIdsChunked(count: number, size: number, type: IdType): string[] {
-  const result: string[] = []
-  const chunkSize = OPTIMIZATION_THRESHOLDS.BATCH_MAX_SIZE
-  const wasmType = convertIdType(type)
-
-  for (let i = 0; i < count; i += chunkSize) {
-    const currentChunkSize = Math.min(chunkSize, count - i)
-    const chunk = wasmCreateIds(currentChunkSize, size, wasmType)
-    result.push(...chunk)
-  }
-
-  return result
-}
-
-/**
- * 非同期版: ランダムな ID を生成
- */
-export async function createIdAsync(
-  size = 7,
-  type: IdType = IdType.Default
-): Promise<string> {
-  await initWasm()
-  return wasmCreateId(size, convertIdType(type))
-}
-
-/**
- * 🚀 非同期版: バッチID生成
- */
-export async function createIdsAsync(
-  count: number,
-  size = 7,
-  type: IdType = IdType.Default
-): Promise<string[]> {
-  await initWasm()
-  return createIds(count, size, type)
-}
-
-/**
- * シードベースで決定的な ID を生成
+ * シードベースで決定的な ID を生成（WASM gnrng + TypeScript ID生成）
  * @param seed シード文字列
  * @param size ID のサイズ（デフォルト: 7）
  * @param type ID のタイプ（デフォルト: Default）
@@ -304,7 +219,19 @@ export function createIdBySeed(
   type: IdType = IdType.Default
 ): string {
   ensureWasmInitialized()
-  return wasmCreateIdBySeed(seed, size, convertIdType(type))
+
+  const rng = new Gnrng(seed)
+  const prefix = getPrefix(type)
+
+  try {
+    const nanoid = customRandom(AVAILABLE_ALPHABET, size, (size) => {
+      return new Uint8Array(size).map(() => 256 * rng.next())
+    })
+
+    return `${prefix}${nanoid()}`
+  } finally {
+    rng.free()
+  }
 }
 
 /**
@@ -324,433 +251,24 @@ export function createIdsBySeed(
   ensureWasmInitialized()
 
   if (count <= 0) return []
-  if (count === 1) {
-    return [wasmCreateIdBySeed(baseSeed, size, convertIdType(type))]
-  }
-  if (count > OPTIMIZATION_THRESHOLDS.BATCH_MAX_SIZE) {
-    return createIdsBySeedChunked(baseSeed, count, size, type)
-  }
 
-  return wasmCreateIdsBySeed(baseSeed, count, size, convertIdType(type))
-}
+  const prefix = getPrefix(type)
+  const results: string[] = []
 
-/**
- * 大量シードID生成を分割処理
- */
-function createIdsBySeedChunked(
-  baseSeed: string,
-  count: number,
-  size: number,
-  type: IdType
-): string[] {
-  const result: string[] = []
-  const chunkSize = OPTIMIZATION_THRESHOLDS.BATCH_MAX_SIZE
-  const wasmType = convertIdType(type)
+  // 各IDに異なるシードを使用
+  for (let i = 0; i < count; i++) {
+    const rng = new Gnrng(`${baseSeed}-${i}`)
 
-  for (let i = 0; i < count; i += chunkSize) {
-    const currentChunkSize = Math.min(chunkSize, count - i)
-    const chunkBaseSeed = `${baseSeed}-chunk-${Math.floor(i / chunkSize)}`
-    const chunk = wasmCreateIdsBySeed(
-      chunkBaseSeed,
-      currentChunkSize,
-      size,
-      wasmType
-    )
-    result.push(...chunk)
-  }
-
-  return result
-}
-
-/**
- * 🚀 決定的シードID生成: 同一シードから複数の決定的IDを生成
- * @param seed シード文字列
- * @param count 生成するIDの個数
- * @param size ID のサイズ（デフォルト: 7）
- * @param type ID のタイプ（デフォルト: Default）
- * @returns 生成されたIDの配列
- */
-export function createDeterministicIdsBySeed(
-  seed: string,
-  count: number,
-  size = 7,
-  type: IdType = IdType.Default
-): string[] {
-  ensureWasmInitialized()
-
-  if (count <= 0) return []
-  if (count === 1) {
-    return [wasmCreateIdBySeed(seed, size, convertIdType(type))]
-  }
-  if (count > OPTIMIZATION_THRESHOLDS.BATCH_MAX_SIZE) {
-    return createDeterministicIdsBySeedChunked(seed, count, size, type)
-  }
-
-  return wasmCreateDeterministicIdsBySeed(
-    seed,
-    count,
-    size,
-    convertIdType(type)
-  )
-}
-
-/**
- * 大量決定的ID生成を分割処理
- */
-function createDeterministicIdsBySeedChunked(
-  seed: string,
-  count: number,
-  size: number,
-  type: IdType
-): string[] {
-  const result: string[] = []
-  const chunkSize = OPTIMIZATION_THRESHOLDS.BATCH_MAX_SIZE
-  const wasmType = convertIdType(type)
-
-  for (let i = 0; i < count; i += chunkSize) {
-    const currentChunkSize = Math.min(chunkSize, count - i)
-
-    // 決定的な分割のため、シードにオフセットを含める
-    const rng = new Gnrng(`${seed}-offset-${i}`)
-
-    // チャンク内でのIDを生成
-    const chunk: string[] = []
-    for (let j = 0; j < currentChunkSize; j++) {
-      const id = wasmCreateIdBySeed(`${seed}-${i + j}`, size, wasmType)
-      chunk.push(id)
-    }
-
-    rng.free()
-    result.push(...chunk)
-  }
-
-  return result
-}
-
-/**
- * 非同期版: シードベースで決定的な ID を生成
- */
-export async function createIdBySeedAsync(
-  seed: string,
-  size = 7,
-  type: IdType = IdType.Default
-): Promise<string> {
-  await initWasm()
-  return wasmCreateIdBySeed(seed, size, convertIdType(type))
-}
-
-/**
- * 🚀 非同期版: バッチシードID生成
- */
-export async function createIdsBySeedAsync(
-  baseSeed: string,
-  count: number,
-  size = 7,
-  type: IdType = IdType.Default
-): Promise<string[]> {
-  await initWasm()
-  return createIdsBySeed(baseSeed, count, size, type)
-}
-
-/**
- * 重複を避けたユニークな名前を生成
- * @param baseName ベースとなる名前
- * @param existingNames 既存の名前の配列
- * @returns ユニークな名前
- */
-export function getName(baseName: string, existingNames: string[]): string {
-  ensureWasmInitialized()
-  // JavaScript配列をJSArrayに変換
-  const jsArray = new Array(...existingNames)
-  return wasmGetUniqueName(baseName, jsArray)
-}
-
-/**
- * 🚀 バッチユニーク名生成: 複数のベース名を一括でユニーク名に変換
- * @param baseNames ベースとなる名前の配列
- * @param existingNames 既存の名前の配列
- * @returns ユニークな名前の配列
- */
-export function getNames(
-  baseNames: string[],
-  existingNames: string[]
-): string[] {
-  ensureWasmInitialized()
-
-  if (baseNames.length === 0) return []
-  if (baseNames.length === 1) {
-    return [getName(baseNames[0], existingNames)]
-  }
-  if (baseNames.length < OPTIMIZATION_THRESHOLDS.NAME_BATCH_THRESHOLD) {
-    // 少数の場合は個別処理の方が効率的
-    const result: string[] = []
-    const used = new Set(existingNames)
-
-    for (const baseName of baseNames) {
-      const uniqueName = getName(baseName, Array.from(used))
-      used.add(uniqueName)
-      result.push(uniqueName)
-    }
-
-    return result
-  }
-
-  // バッチ処理
-  const baseNamesArray = new Array(...baseNames)
-  const existingNamesArray = new Array(...existingNames)
-  return wasmGetUniqueNames(baseNamesArray, existingNamesArray)
-}
-
-/**
- * 非同期版: 重複を避けたユニークな名前を生成
- */
-export async function getNameAsync(
-  baseName: string,
-  existingNames: string[]
-): Promise<string> {
-  await initWasm()
-  const jsArray = new Array(...existingNames)
-  return wasmGetUniqueName(baseName, jsArray)
-}
-
-/**
- * 🚀 非同期版: バッチユニーク名生成
- */
-export async function getNamesAsync(
-  baseNames: string[],
-  existingNames: string[]
-): Promise<string[]> {
-  await initWasm()
-  return getNames(baseNames, existingNames)
-}
-
-// 互換性のためのエイリアス（既存のrandUtil.tsとの互換性）
-export { createId as createRandomId }
-export { createIdBySeed as createDeterministicId }
-
-/**
- * 🚀 スマート最適化ユーティリティ
- * 使用パターンに応じて最適なAPIを自動選択
- */
-export namespace smart {
-  /**
-   * スマートGNRNG: 使用パターンに応じて最適化を自動適用
-   */
-  export class SmartGnrng {
-    private rng: Gnrng
-    private pendingRequests: Array<{
-      type: 'next' | 'range'
-      min?: number
-      max?: number
-    }> = []
-    private batchTimeout: ReturnType<typeof setTimeout> | null = null
-
-    constructor(seed: string) {
-      this.rng = new Gnrng(seed)
-    }
-
-    /**
-     * 乱数生成（バッチ最適化付き）
-     */
-    next(): Promise<number> {
-      return new Promise((resolve) => {
-        this.pendingRequests.push({ type: 'next' })
-        this.scheduleFlush(() => {
-          const results = this.rng.nextBatch(this.pendingRequests.length)
-          resolve(results[this.pendingRequests.length - 1])
-        })
+    try {
+      const nanoid = customRandom(AVAILABLE_ALPHABET, size, (size) => {
+        return new Uint8Array(size).map(() => 256 * rng.next())
       })
-    }
 
-    /**
-     * 範囲乱数生成（バッチ最適化付き）
-     */
-    nextRange(min: number, max: number): Promise<number> {
-      return new Promise((resolve) => {
-        this.pendingRequests.push({ type: 'range', min, max })
-        this.scheduleFlush(() => {
-          const results = this.rng.nextRangeBatch(
-            min,
-            max,
-            this.pendingRequests.length
-          )
-          resolve(results[this.pendingRequests.length - 1])
-        })
-      })
-    }
-
-    private scheduleFlush(resolver: () => void): void {
-      if (this.batchTimeout) {
-        clearTimeout(this.batchTimeout)
-      }
-
-      // 即座にバッチサイズに達した場合は即実行
-      if (
-        this.pendingRequests.length >=
-        OPTIMIZATION_THRESHOLDS.GNRNG_BATCH_THRESHOLD
-      ) {
-        this.flush()
-        resolver()
-        return
-      }
-
-      // 少し待ってバッチ化
-      this.batchTimeout = setTimeout(() => {
-        this.flush()
-        resolver()
-      }, 1)
-    }
-
-    private flush(): void {
-      this.pendingRequests = []
-      if (this.batchTimeout) {
-        clearTimeout(this.batchTimeout)
-        this.batchTimeout = null
-      }
-    }
-
-    free(): void {
-      this.flush()
-      this.rng.free()
+      results.push(`${prefix}${nanoid()}`)
+    } finally {
+      rng.free()
     }
   }
 
-  /**
-   * スマートID生成: バッチサイズに応じて最適なAPIを選択
-   */
-  export function createIds(
-    count: number,
-    size = 7,
-    type: IdType = IdType.Default
-  ): string[] {
-    if (count < OPTIMIZATION_THRESHOLDS.ID_BATCH_THRESHOLD) {
-      // 少数の場合は個別生成
-      return Array.from({ length: count }, () => createId(size, type))
-    }
-    // 多数の場合はバッチ生成
-    return createIds(count, size, type)
-  }
-}
-
-/**
- * ライブラリ情報
- */
-export const version = '0.1.0'
-export const name = '@nap5/gnrng-id'
-
-/**
- * パフォーマンス設定の取得/変更
- */
-export const performance = {
-  /**
-   * 現在の最適化閾値を取得
-   */
-  getThresholds: () => ({ ...OPTIMIZATION_THRESHOLDS }),
-
-  /**
-   * バッチ処理の統計情報（開発/デバッグ用）
-   */
-  getStats: () => ({
-    wasmInitialized,
-    thresholds: OPTIMIZATION_THRESHOLDS,
-    version,
-    name,
-  }),
-} as const
-
-/**
- * 利便性のため、自動初期化する関数群
- * これらは初回呼び出し時に自動的にWASMを初期化します
- */
-export namespace auto {
-  /**
-   * 自動初期化付き: ランダムな ID を生成
-   */
-  export async function createId(
-    size = 7,
-    type: IdType = IdType.Default
-  ): Promise<string> {
-    return createIdAsync(size, type)
-  }
-
-  /**
-   * 🚀 自動初期化付き: バッチID生成
-   */
-  export async function createIds(
-    count: number,
-    size = 7,
-    type: IdType = IdType.Default
-  ): Promise<string[]> {
-    return createIdsAsync(count, size, type)
-  }
-
-  /**
-   * 自動初期化付き: シードベースで決定的な ID を生成
-   */
-  export async function createIdBySeed(
-    seed: string,
-    size = 7,
-    type: IdType = IdType.Default
-  ): Promise<string> {
-    return createIdBySeedAsync(seed, size, type)
-  }
-
-  /**
-   * 🚀 自動初期化付き: バッチシードID生成
-   */
-  export async function createIdsBySeed(
-    baseSeed: string,
-    count: number,
-    size = 7,
-    type: IdType = IdType.Default
-  ): Promise<string[]> {
-    return createIdsBySeedAsync(baseSeed, count, size, type)
-  }
-
-  /**
-   * 自動初期化付き: GNRNG インスタンスを作成
-   */
-  export async function gnrng(seed: string): Promise<Gnrng> {
-    return gnrngAsync(seed)
-  }
-
-  /**
-   * 自動初期化付き: ユニークな名前を生成
-   */
-  export async function getName(
-    baseName: string,
-    existingNames: string[]
-  ): Promise<string> {
-    return getNameAsync(baseName, existingNames)
-  }
-
-  /**
-   * 🚀 自動初期化付き: バッチユニーク名生成
-   */
-  export async function getNames(
-    baseNames: string[],
-    existingNames: string[]
-  ): Promise<string[]> {
-    return getNamesAsync(baseNames, existingNames)
-  }
-}
-
-// デフォルトエクスポート
-export default {
-  initWasm,
-  Gnrng,
-  gnrng,
-  createId,
-  createIds,
-  createIdBySeed,
-  createIdsBySeed,
-  createDeterministicIdsBySeed,
-  getName,
-  getNames,
-  IdType,
-  auto,
-  smart,
-  performance,
-  version,
-  name,
+  return results
 }
