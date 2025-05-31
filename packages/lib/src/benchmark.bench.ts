@@ -1,13 +1,5 @@
 import { beforeAll, bench, describe } from 'vitest'
-import {
-  Gnrng,
-  IdType,
-  createId,
-  createIdBySeed,
-  getName,
-  gnrng,
-  initWasm,
-} from './index'
+import { Gnrng, IdType, createId, createIdBySeed, getName, gnrng, initWasm } from './index'
 
 // 既存実装との比較用
 import {
@@ -165,10 +157,10 @@ describe('Performance Benchmarks: WASM vs TypeScript', () => {
       for (let i = 0; i < 1000; i++) {
         // ID生成
         const randomId = createId(7, IdType.User)
-        const seededId = createIdBySeed(`seed-${i}`, 7, IdType.Project)
+        const _seededId = createIdBySeed(`seed-${i}`, 7, IdType.Project)
 
         // 名前生成
-        const uniqueName = getName('Item', ['Item', 'Item (1)', randomId])
+        const _uniqueName = getName('Item', ['Item', 'Item (1)', randomId])
 
         // 乱数生成
         const rng = gnrng(`mixed-${i}`)
@@ -182,10 +174,10 @@ describe('Performance Benchmarks: WASM vs TypeScript', () => {
       for (let i = 0; i < 1000; i++) {
         // ID生成
         const randomId = utilsCreateId(7, 'user')
-        const seededId = utilsCreateIdBySeed(`seed-${i}`, 7, 'project')
+        const _seededId = utilsCreateIdBySeed(`seed-${i}`, 7, 'project')
 
         // 名前生成
-        const uniqueName = utilsGetName('Item', ['Item', 'Item (1)', randomId])
+        const _uniqueName = utilsGetName('Item', ['Item', 'Item (1)', randomId])
 
         // 乱数生成
         const rng = utilsGnrng(`mixed-${i}`)
@@ -237,7 +229,7 @@ describe('Performance Benchmarks: WASM vs TypeScript', () => {
 
     bench('TypeScript: GNRNG instance creation 1000 times', () => {
       for (let i = 0; i < 1000; i++) {
-        const rng = utilsGnrng(`instance-${i}`)
+        const _rng = utilsGnrng(`instance-${i}`)
         // TypeScript版は関数なので特別な破棄処理なし
       }
     })
@@ -291,10 +283,7 @@ describe('Performance Benchmarks: WASM vs TypeScript', () => {
       }
     })
 
-    const largeExistingList = Array.from(
-      { length: 1000 },
-      (_, i) => `Item ${i}`
-    )
+    const largeExistingList = Array.from({ length: 1000 }, (_, i) => `Item ${i}`)
 
     bench('WASM: getName() with large existing list (100 times)', () => {
       for (let i = 0; i < 100; i++) {

@@ -143,7 +143,7 @@ export function BenchmarkDemo() {
           )
           break
 
-        case 'get-name':
+        case 'get-name': {
           const existingNames = ['Panel', 'Panel (1)', 'Panel (2)', 'Panel (3)']
           result = await runBenchmark(
             'Unique Name Generation',
@@ -152,22 +152,23 @@ export function BenchmarkDemo() {
             iterationCount
           )
           break
+        }
 
         case 'mixed-workload':
           result = await runBenchmark(
             'Mixed Workload',
             () => {
               const id1 = wasmCreateId(7, IdType.User)
-              const id2 = wasmCreateIdBySeed('test', 7, IdType.Project)
-              const name = wasmGetName('Item', ['Item', id1])
+              const _id2 = wasmCreateIdBySeed('test', 7, IdType.Project)
+              const _name = wasmGetName('Item', ['Item', id1])
               const rng = new WasmGnrng('mixed')
               rng.next()
               rng.free()
             },
             () => {
               const id1 = utilsCreateId(7, 'user')
-              const id2 = utilsCreateIdBySeed('test', 7, 'project')
-              const name = utilsGetName('Item', ['Item', id1])
+              const _id2 = utilsCreateIdBySeed('test', 7, 'project')
+              const _name = utilsGetName('Item', ['Item', id1])
               const rng = utilsGnrng('mixed')
               rng()
             },
@@ -268,7 +269,7 @@ export function BenchmarkDemo() {
             )
             break
 
-          case 'get-name':
+          case 'get-name': {
             const existingNames = [
               'Panel',
               'Panel (1)',
@@ -282,22 +283,23 @@ export function BenchmarkDemo() {
               iterationCount
             )
             break
+          }
 
           case 'mixed-workload':
             result = await runBenchmark(
               'Mixed Workload',
               () => {
                 const id1 = wasmCreateId(7, IdType.User)
-                const id2 = wasmCreateIdBySeed('test', 7, IdType.Project)
-                const name = wasmGetName('Item', ['Item', id1])
+                const _id2 = wasmCreateIdBySeed('test', 7, IdType.Project)
+                const _name = wasmGetName('Item', ['Item', id1])
                 const rng = new WasmGnrng('mixed')
                 rng.next()
                 rng.free()
               },
               () => {
                 const id1 = utilsCreateId(7, 'user')
-                const id2 = utilsCreateIdBySeed('test', 7, 'project')
-                const name = utilsGetName('Item', ['Item', id1])
+                const _id2 = utilsCreateIdBySeed('test', 7, 'project')
+                const _name = utilsGetName('Item', ['Item', id1])
                 const rng = utilsGnrng('mixed')
                 rng()
               },
@@ -344,10 +346,14 @@ export function BenchmarkDemo() {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-blue-800">
+                <label
+                  htmlFor="test-select"
+                  className="text-sm font-medium text-blue-800"
+                >
                   テスト:
                 </label>
                 <select
+                  id="test-select"
                   value={selectedTest}
                   onChange={(e) => setSelectedTest(e.target.value)}
                   className="input"
@@ -363,10 +369,14 @@ export function BenchmarkDemo() {
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-blue-800">
+                <label
+                  htmlFor="iterations-input"
+                  className="text-sm font-medium text-blue-800"
+                >
                   反復回数:
                 </label>
                 <input
+                  id="iterations-input"
                   type="number"
                   value={iterations}
                   onChange={(e) => setIterations(e.target.value)}
@@ -380,6 +390,7 @@ export function BenchmarkDemo() {
 
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={handleRunBenchmark}
                 disabled={isRunning}
                 className="btn-primary disabled:opacity-50"
@@ -388,6 +399,7 @@ export function BenchmarkDemo() {
               </button>
 
               <button
+                type="button"
                 onClick={runAllBenchmarks}
                 disabled={isRunning}
                 className="btn-secondary disabled:opacity-50"
@@ -402,7 +414,7 @@ export function BenchmarkDemo() {
         {isRunning && (
           <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50">
             <div className="flex items-center">
-              <div className="w-4 h-4 mr-3 border-2 border-yellow-600 rounded-full animate-spin border-t-transparent"></div>
+              <div className="w-4 h-4 mr-3 border-2 border-yellow-600 rounded-full animate-spin border-t-transparent" />
               <span className="text-yellow-800">
                 実行中: {selectedTest} ({iterations}回)
               </span>
@@ -417,7 +429,7 @@ export function BenchmarkDemo() {
               📈 ベンチマーク結果
             </h4>
             <div className="space-y-3">
-              {results.map((result, index) => (
+              {results.map((result) => (
                 <div
                   key={`${result.name}-${result.timestamp.getTime()}`}
                   className="p-4 bg-white border rounded-lg"
@@ -491,7 +503,7 @@ export function BenchmarkDemo() {
                         style={{
                           width: `${Math.min((result.improvement / 10) * 100, 100)}%`,
                         }}
-                      ></div>
+                      />
                     </div>
                   </div>
                 </div>
