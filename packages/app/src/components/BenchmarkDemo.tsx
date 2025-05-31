@@ -105,25 +105,24 @@ export function BenchmarkDemo() {
           )
           break
 
-        case 'gnrng-sequence':
+        case 'gnrng-sequence': {
+          const rng = new WasmGnrng('benchmark-seed')
+          const tsRng = utilsGnrng('benchmark-seed')
+
           result = await runBenchmark(
             'GNRNG Sequence Generation',
             () => {
-              const rng = new WasmGnrng('benchmark-seed')
-              for (let i = 0; i < 10; i++) {
-                rng.next()
-              }
-              rng.free()
+              rng.next() // 1回だけ
             },
             () => {
-              const rng = utilsGnrng('benchmark-seed')
-              for (let i = 0; i < 10; i++) {
-                rng()
-              }
+              tsRng()
             },
-            Math.floor(iterationCount / 10)
+            iterationCount // /10 しない。正味 iterationCount 回
           )
+
+          rng.free() // 最後にfree()
           break
+        }
 
         case 'create-id':
           result = await runBenchmark(
@@ -231,25 +230,24 @@ export function BenchmarkDemo() {
             )
             break
 
-          case 'gnrng-sequence':
+          case 'gnrng-sequence': {
+            const rng = new WasmGnrng('benchmark-seed')
+            const tsRng = utilsGnrng('benchmark-seed')
+
             result = await runBenchmark(
               'GNRNG Sequence Generation',
               () => {
-                const rng = new WasmGnrng('benchmark-seed')
-                for (let i = 0; i < 10; i++) {
-                  rng.next()
-                }
-                rng.free()
+                rng.next() // 1回だけ
               },
               () => {
-                const rng = utilsGnrng('benchmark-seed')
-                for (let i = 0; i < 10; i++) {
-                  rng()
-                }
+                tsRng()
               },
-              Math.floor(iterationCount / 10)
+              iterationCount // /10 しない。正味 iterationCount 回
             )
+
+            rng.free() // 最後にfree()
             break
+          }
 
           case 'create-id':
             result = await runBenchmark(
