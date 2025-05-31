@@ -58,7 +58,9 @@ export async function initWasm(): Promise<void> {
  */
 function ensureWasmInitialized(): void {
   if (!wasmInitialized) {
-    throw new Error('WASM module not initialized. Call initWasm() first or use the async variants.')
+    throw new Error(
+      'WASM module not initialized. Call initWasm() first or use the async variants.'
+    )
   }
 }
 
@@ -120,7 +122,7 @@ export class Gnrng {
       // 大量処理時は分割して処理（メモリ効率化）
       return this.nextBatchChunked(count)
     }
-    return this.wasmInstance.next_batch(count)
+    return [...this.wasmInstance.next_batch(count)]
   }
 
   /**
@@ -159,19 +161,27 @@ export class Gnrng {
       // 大量処理時は分割して処理
       return this.nextRangeBatchChunked(min, max, count)
     }
-    return this.wasmInstance.next_range_batch(min, max, count)
+    return [...this.wasmInstance.next_range_batch(min, max, count)]
   }
 
   /**
    * 大量範囲バッチを分割処理
    */
-  private nextRangeBatchChunked(min: number, max: number, count: number): number[] {
+  private nextRangeBatchChunked(
+    min: number,
+    max: number,
+    count: number
+  ): number[] {
     const result: number[] = []
     const chunkSize = OPTIMIZATION_THRESHOLDS.BATCH_MAX_SIZE
 
     for (let i = 0; i < count; i += chunkSize) {
       const currentChunkSize = Math.min(chunkSize, count - i)
-      const chunk = this.wasmInstance.next_range_batch(min, max, currentChunkSize)
+      const chunk = this.wasmInstance.next_range_batch(
+        min,
+        max,
+        currentChunkSize
+      )
       result.push(...chunk)
     }
 
@@ -221,7 +231,11 @@ export function createId(size = 7, type: IdType = IdType.Default): string {
  * @param type ID のタイプ（デフォルト: Default）
  * @returns 生成されたIDの配列
  */
-export function createIds(count: number, size = 7, type: IdType = IdType.Default): string[] {
+export function createIds(
+  count: number,
+  size = 7,
+  type: IdType = IdType.Default
+): string[] {
   ensureWasmInitialized()
 
   if (count <= 0) return []
@@ -257,7 +271,10 @@ function createIdsChunked(count: number, size: number, type: IdType): string[] {
 /**
  * 非同期版: ランダムな ID を生成
  */
-export async function createIdAsync(size = 7, type: IdType = IdType.Default): Promise<string> {
+export async function createIdAsync(
+  size = 7,
+  type: IdType = IdType.Default
+): Promise<string> {
   await initWasm()
   return wasmCreateId(size, convertIdType(type))
 }
@@ -281,7 +298,11 @@ export async function createIdsAsync(
  * @param type ID のタイプ（デフォルト: Default）
  * @returns 生成された ID
  */
-export function createIdBySeed(seed: string, size = 7, type: IdType = IdType.Default): string {
+export function createIdBySeed(
+  seed: string,
+  size = 7,
+  type: IdType = IdType.Default
+): string {
   ensureWasmInitialized()
   return wasmCreateIdBySeed(seed, size, convertIdType(type))
 }
@@ -329,7 +350,12 @@ function createIdsBySeedChunked(
   for (let i = 0; i < count; i += chunkSize) {
     const currentChunkSize = Math.min(chunkSize, count - i)
     const chunkBaseSeed = `${baseSeed}-chunk-${Math.floor(i / chunkSize)}`
-    const chunk = wasmCreateIdsBySeed(chunkBaseSeed, currentChunkSize, size, wasmType)
+    const chunk = wasmCreateIdsBySeed(
+      chunkBaseSeed,
+      currentChunkSize,
+      size,
+      wasmType
+    )
     result.push(...chunk)
   }
 
@@ -360,7 +386,12 @@ export function createDeterministicIdsBySeed(
     return createDeterministicIdsBySeedChunked(seed, count, size, type)
   }
 
-  return wasmCreateDeterministicIdsBySeed(seed, count, size, convertIdType(type))
+  return wasmCreateDeterministicIdsBySeed(
+    seed,
+    count,
+    size,
+    convertIdType(type)
+  )
 }
 
 /**
@@ -440,7 +471,10 @@ export function getName(baseName: string, existingNames: string[]): string {
  * @param existingNames 既存の名前の配列
  * @returns ユニークな名前の配列
  */
-export function getNames(baseNames: string[], existingNames: string[]): string[] {
+export function getNames(
+  baseNames: string[],
+  existingNames: string[]
+): string[] {
   ensureWasmInitialized()
 
   if (baseNames.length === 0) return []
@@ -470,7 +504,10 @@ export function getNames(baseNames: string[], existingNames: string[]): string[]
 /**
  * 非同期版: 重複を避けたユニークな名前を生成
  */
-export async function getNameAsync(baseName: string, existingNames: string[]): Promise<string> {
+export async function getNameAsync(
+  baseName: string,
+  existingNames: string[]
+): Promise<string> {
   await initWasm()
   const jsArray = new Array(...existingNames)
   return wasmGetUniqueName(baseName, jsArray)
@@ -532,7 +569,11 @@ export namespace smart {
       return new Promise((resolve) => {
         this.pendingRequests.push({ type: 'range', min, max })
         this.scheduleFlush(() => {
-          const results = this.rng.nextRangeBatch(min, max, this.pendingRequests.length)
+          const results = this.rng.nextRangeBatch(
+            min,
+            max,
+            this.pendingRequests.length
+          )
           resolve(results[this.pendingRequests.length - 1])
         })
       })
@@ -544,7 +585,10 @@ export namespace smart {
       }
 
       // 即座にバッチサイズに達した場合は即実行
-      if (this.pendingRequests.length >= OPTIMIZATION_THRESHOLDS.GNRNG_BATCH_THRESHOLD) {
+      if (
+        this.pendingRequests.length >=
+        OPTIMIZATION_THRESHOLDS.GNRNG_BATCH_THRESHOLD
+      ) {
         this.flush()
         resolver()
         return
@@ -574,7 +618,11 @@ export namespace smart {
   /**
    * スマートID生成: バッチサイズに応じて最適なAPIを選択
    */
-  export function createIds(count: number, size = 7, type: IdType = IdType.Default): string[] {
+  export function createIds(
+    count: number,
+    size = 7,
+    type: IdType = IdType.Default
+  ): string[] {
     if (count < OPTIMIZATION_THRESHOLDS.ID_BATCH_THRESHOLD) {
       // 少数の場合は個別生成
       return Array.from({ length: count }, () => createId(size, type))
@@ -618,7 +666,10 @@ export namespace auto {
   /**
    * 自動初期化付き: ランダムな ID を生成
    */
-  export async function createId(size = 7, type: IdType = IdType.Default): Promise<string> {
+  export async function createId(
+    size = 7,
+    type: IdType = IdType.Default
+  ): Promise<string> {
     return createIdAsync(size, type)
   }
 
@@ -666,14 +717,20 @@ export namespace auto {
   /**
    * 自動初期化付き: ユニークな名前を生成
    */
-  export async function getName(baseName: string, existingNames: string[]): Promise<string> {
+  export async function getName(
+    baseName: string,
+    existingNames: string[]
+  ): Promise<string> {
     return getNameAsync(baseName, existingNames)
   }
 
   /**
    * 🚀 自動初期化付き: バッチユニーク名生成
    */
-  export async function getNames(baseNames: string[], existingNames: string[]): Promise<string[]> {
+  export async function getNames(
+    baseNames: string[],
+    existingNames: string[]
+  ): Promise<string[]> {
     return getNamesAsync(baseNames, existingNames)
   }
 }
