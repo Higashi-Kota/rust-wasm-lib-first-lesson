@@ -40,9 +40,7 @@ export async function initWasm(): Promise<void> {
  */
 function ensureWasmInitialized(): void {
   if (!wasmInitialized) {
-    throw new Error(
-      'WASM module not initialized. Call initWasm() first or use the async variants.'
-    )
+    throw new Error('WASM module not initialized. Call initWasm() first or use the async variants.')
   }
 }
 
@@ -139,10 +137,7 @@ export function createId(size = 7, type: IdType = IdType.Default): string {
 /**
  * 非同期版: ランダムな ID を生成
  */
-export async function createIdAsync(
-  size = 7,
-  type: IdType = IdType.Default
-): Promise<string> {
+export async function createIdAsync(size = 7, type: IdType = IdType.Default): Promise<string> {
   await initWasm()
   return wasmCreateId(size, convertIdType(type))
 }
@@ -154,11 +149,7 @@ export async function createIdAsync(
  * @param type ID のタイプ（デフォルト: Default）
  * @returns 生成された ID
  */
-export function createIdBySeed(
-  seed: string,
-  size = 7,
-  type: IdType = IdType.Default
-): string {
+export function createIdBySeed(seed: string, size = 7, type: IdType = IdType.Default): string {
   ensureWasmInitialized()
   return wasmCreateIdBySeed(seed, size, convertIdType(type))
 }
@@ -191,10 +182,7 @@ export function getName(baseName: string, existingNames: string[]): string {
 /**
  * 非同期版: 重複を避けたユニークな名前を生成
  */
-export async function getNameAsync(
-  baseName: string,
-  existingNames: string[]
-): Promise<string> {
+export async function getNameAsync(baseName: string, existingNames: string[]): Promise<string> {
   await initWasm()
   const jsArray = new Array(...existingNames)
   return wasmGetUniqueName(baseName, jsArray)
@@ -218,10 +206,7 @@ export namespace auto {
   /**
    * 自動初期化付き: ランダムな ID を生成
    */
-  export async function createId(
-    size = 7,
-    type: IdType = IdType.Default
-  ): Promise<string> {
+  export async function createId(size = 7, type: IdType = IdType.Default): Promise<string> {
     return createIdAsync(size, type)
   }
 
@@ -246,10 +231,7 @@ export namespace auto {
   /**
    * 自動初期化付き: ユニークな名前を生成
    */
-  export async function getName(
-    baseName: string,
-    existingNames: string[]
-  ): Promise<string> {
+  export async function getName(baseName: string, existingNames: string[]): Promise<string> {
     return getNameAsync(baseName, existingNames)
   }
 }

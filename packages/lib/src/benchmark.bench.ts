@@ -168,7 +168,7 @@ describe('Performance Benchmarks: WASM vs TypeScript', () => {
         const seededId = createIdBySeed(`seed-${i}`, 7, IdType.Project)
 
         // 名前生成
-        const uniqueName = getName('Item', [`Item`, 'Item (1)', randomId])
+        const uniqueName = getName('Item', ['Item', 'Item (1)', randomId])
 
         // 乱数生成
         const rng = gnrng(`mixed-${i}`)
@@ -185,7 +185,7 @@ describe('Performance Benchmarks: WASM vs TypeScript', () => {
         const seededId = utilsCreateIdBySeed(`seed-${i}`, 7, 'project')
 
         // 名前生成
-        const uniqueName = utilsGetName('Item', [`Item`, 'Item (1)', randomId])
+        const uniqueName = utilsGetName('Item', ['Item', 'Item (1)', randomId])
 
         // 乱数生成
         const rng = utilsGnrng(`mixed-${i}`)
@@ -198,14 +198,14 @@ describe('Performance Benchmarks: WASM vs TypeScript', () => {
 
   describe('Memory Intensive Performance', () => {
     bench('WASM: Large batch ID generation (10000 IDs)', () => {
-      const ids = []
+      const ids: string[] = []
       for (let i = 0; i < 10000; i++) {
         ids.push(createIdBySeed(`batch-${i}`, 10, IdType.Default))
       }
     })
 
     bench('TypeScript: Large batch ID generation (10000 IDs)', () => {
-      const ids = []
+      const ids: string[] = []
       for (let i = 0; i < 10000; i++) {
         ids.push(utilsCreateIdBySeed(`batch-${i}`, 10, 'default'))
       }
@@ -298,13 +298,13 @@ describe('Performance Benchmarks: WASM vs TypeScript', () => {
 
     bench('WASM: getName() with large existing list (100 times)', () => {
       for (let i = 0; i < 100; i++) {
-        getName(`NewItem`, largeExistingList)
+        getName('NewItem', largeExistingList)
       }
     })
 
     bench('TypeScript: getName() with large existing list (100 times)', () => {
       for (let i = 0; i < 100; i++) {
-        utilsGetName(`NewItem`, largeExistingList)
+        utilsGetName('NewItem', largeExistingList)
       }
     })
   })

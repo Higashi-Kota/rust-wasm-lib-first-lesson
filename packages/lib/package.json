@@ -28,7 +28,11 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "funding": {
     "type": "individual",
     "url": "https://github.com/sponsors/Higashi-Kota"
@@ -66,7 +70,7 @@
     "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson.git"
   },
   "scripts": {
-    "benchmark": "vitest run --reporter=verbose src/benchmark.test.ts",
+    "benchmark": "vitest bench --reporter=verbose src/benchmark.bench.ts",
     "build": "pnpm run build:wasm && pnpm run build:lib",
     "build:lib": "tsup",
     "build:wasm": "wasm-pack build ../crates/gnrng-id --target web --scope nap5 --release",

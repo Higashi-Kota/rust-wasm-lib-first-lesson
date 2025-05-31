@@ -287,10 +287,10 @@ mod tests {
         // TypeScriptの実装と同じ結果が得られることを確認
         let mut rng = Gnrng::new("test-seed");
         let value = rng.next();
-        
+
         // 0.0以上1.0未満の範囲
         assert!((0.0..1.0).contains(&value));
-        
+
         // 決定性の確認
         let mut rng1 = Gnrng::new("same-seed");
         let mut rng2 = Gnrng::new("same-seed");

@@ -135,16 +135,12 @@ describe('@nap5/gnrng-id', () => {
   describe('createId function', () => {
     it('should create ID with default parameters', () => {
       const id = createId()
-      expect(id).toMatch(
-        /^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
-      )
+      expect(id).toMatch(/^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/)
     })
 
     it('should create ID with custom size', () => {
       const id = createId(10)
-      expect(id).toMatch(
-        /^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{10}$/
-      )
+      expect(id).toMatch(/^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{10}$/)
     })
 
     it('should create ID with different types', () => {
@@ -170,8 +166,7 @@ describe('@nap5/gnrng-id', () => {
     it('should use safe alphabet only', () => {
       const id = createId(100) // Large size to test alphabet
       const idContent = id.slice(2) // Remove prefix
-      const safeAlphabet =
-        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+      const safeAlphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
       for (const char of idContent) {
         expect(safeAlphabet).toContain(char)
@@ -194,16 +189,12 @@ describe('@nap5/gnrng-id', () => {
 
     it('should respect size parameter', () => {
       const id = createIdBySeed('test-seed', 12)
-      expect(id).toMatch(
-        /^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{12}$/
-      )
+      expect(id).toMatch(/^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{12}$/)
     })
 
     it('should respect type parameter', () => {
       const userId = createIdBySeed('test-seed', 7, IdType.User)
-      expect(userId).toMatch(
-        /^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
-      )
+      expect(userId).toMatch(/^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/)
     })
 
     it('should be compatible with utils implementation', () => {
@@ -237,12 +228,7 @@ describe('@nap5/gnrng-id', () => {
     })
 
     it('should find next available number in sequence', () => {
-      const result = getName('Panel', [
-        'Panel',
-        'Panel (1)',
-        'Panel (2)',
-        'Panel (3)',
-      ])
+      const result = getName('Panel', ['Panel', 'Panel (1)', 'Panel (2)', 'Panel (3)'])
       expect(result).toBe('Panel (4)')
     })
 
@@ -266,8 +252,8 @@ describe('@nap5/gnrng-id', () => {
       ] as const
 
       for (const [name, existing] of testCases) {
-        const wasmResult = getName(name, existing)
-        const utilsResult = utilsGetName(name, existing)
+        const wasmResult = getName(name, [...existing])
+        const utilsResult = utilsGetName(name, [...existing])
         expect(wasmResult).toBe(utilsResult)
       }
     })
@@ -276,9 +262,7 @@ describe('@nap5/gnrng-id', () => {
   describe('Async API (auto namespace)', () => {
     it('should auto-initialize and create ID', async () => {
       const id = await auto.createId()
-      expect(id).toMatch(
-        /^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
-      )
+      expect(id).toMatch(/^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/)
     })
 
     it('should auto-initialize and create ID by seed', async () => {
