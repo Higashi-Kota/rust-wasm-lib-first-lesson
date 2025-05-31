@@ -1,0 +1,15 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "extends": [
+    "./packages/shared-config/biome.json"
+  ],
+  "files": {
+    "ignore": [
+      "**/target",
+      "**/Cargo.lock"
+    ],
+    "include": [
+      "packages/**/*"
+    ]
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "name": "rust-wasm-react-starter",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Rust WASM × React スターターキット with モノレポ構成",
+  "workspaces": ["packages/*", "packages/crates/*/pkg"],
+  "type": "module",
+  "scripts": {
+    "clean:modules": "find packages -type d -name node_modules -prune -exec rm -rf {} +",
+    "clean:build": "find packages -name '*.tsbuildinfo' -delete && find packages -type d -name dist -exec rm -rf {} +",
+    "clean:wasm": "find packages/crates -type d -name pkg -exec rm -rf {} +",
+    "clean:all": "pnpm run clean:build && pnpm run clean:wasm && rm -rf dist node_modules pnpm-lock.yaml && pnpm run clean:modules",
+    "reset": "pnpm run clean:all && pnpm install",
+    
+    "build:wasm": "make build-wasm-dev",
+    "build:wasm:prod": "make build-wasm-prod",
+    "watch:wasm": "make watch-wasm",
+    
+    "dev": "pnpm --filter app dev",
+    "dev:all": "concurrently \"pnpm run watch:wasm\" \"pnpm --filter app dev\" --names \"wasm,app\" --prefix-colors \"orange,green\"",
+    "dev:watch": "concurrently \"pnpm --filter @internal/utils dev\" \"pnpm run watch:wasm\" \"pnpm --filter app dev\" --names \"utils,wasm,app\" --prefix-colors \"yellow,orange,green\"",
+    
+    "build": "pnpm run build:wasm:prod && pnpm run build:utils && pnpm -r --filter app build",
+    "build:utils": "pnpm --filter @internal/utils build",
+    
+    "preview": "pnpm -r preview",
+    "format": "pnpm run format:rust && pnpm run format:ts",
+    "format:ts": "pnpm -r --parallel format",
+    "format:rust": "cargo fmt --all",
+    "check": "pnpm run check:rust && pnpm run check:ts",
+    "check:ts": "pnpm -r --parallel check",
+    "check:rust": "cargo clippy --workspace --all-targets -- -D warnings",
+    "check:fix": "pnpm -r --parallel check:fix",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "package:check": "pnpm -r --parallel package:check",
+    
+    "test": "pnpm run test:rust && pnpm run test:ts",
+    "test:ts": "pnpm -r --parallel test:run",
+    "test:rust": "cargo test --workspace",
+    "test:utils": "pnpm --filter @internal/utils test",
+    "test:app": "pnpm --filter app test",
+    "test:run": "pnpm -r --parallel test:run",
+    "test:ui": "pnpm --filter app test:ui",
+    "test:coverage": "pnpm -r --parallel test:coverage",
+    "test:watch": "pnpm -r --parallel test",
+    
+    "install:all": "pnpm run build:wasm && pnpm install",
+    "setup": "pnpm run install:all",
+    
+    "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=22.11.0",
+    "pnpm": ">=10.11.0"
+  },
+  "volta": {
+    "node": "22.11.0",
+    "pnpm": "10.11.0"
+  },
+  "keywords": [
+    "rust",
+    "webassembly",
+    "wasm",
+    "react",
+    "typescript",
+    "vite",
+    "monorepo",
+    "pnpm-workspace"
+  ]
+}

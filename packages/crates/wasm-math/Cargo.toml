@@ -1,0 +1,27 @@
+[package]
+name = "wasm-math"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+# cdylibはWASMバイナリの生成に必要
+# rlibは通常のRustライブラリとしても使用可能にする
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# ワークスペースの共通依存関係を使用
+wasm-bindgen = { workspace = true }
+
+# コンソール出力用（デバッグ時に便利）
+console_error_panic_hook = { version = "0.1.7", optional = true }
+wee_alloc = { version = "0.4.5", optional = true }
+
+[dependencies.web-sys]
+workspace = true
+features = [
+  "console",
+]
+
+# フィーチャーの定義
+[features]
+default = ["console_error_panic_hook", "wee_alloc"]

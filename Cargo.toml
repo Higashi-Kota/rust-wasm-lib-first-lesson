@@ -1,0 +1,14 @@
+[workspace]
+# Rustクレートのワークスペース定義
+members = [
+    "packages/crates/wasm-math",
+    "packages/crates/wasm-text", 
+    "packages/crates/wasm-utils",
+]
+resolver = "2"
+
+# ワークスペース全体で共通の依存関係
+[workspace.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = "0.3"

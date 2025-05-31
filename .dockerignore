@@ -1,0 +1,154 @@
+# Build artifacts
+target/
+**/target/
+packages/app/dist/
+packages/utils/dist/
+packages/*/dist/
+
+# Dependency directories
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Lock file backups - keep the actual lock files
+Cargo.lock.bak
+**/Cargo.lock.bak
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Test files and coverage
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+playwright-report/
+
+# Vitest
+.vitest/
+
+# Documentation build
+docs/_build/
+site/
+book/
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Docker files
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+
+# Development tools and temporary files
+*.tmp
+*.temp
+.docker/
+.cache/
+
+# Rust-specific
+**/*.rs.bk
+**/*.pdb
+
+# WASM build artifacts that we'll rebuild
+packages/crates/*/pkg/
+**/pkg/
+
+# TypeScript build info
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Development scripts
+scripts/dev/
+scripts/test/
+
+# Local development overrides
+docker-compose.override.yml
+.env.override
+
+# Benchmarks and profiling
+**/benches/results/
+**/profiling/
+
+# Temporary build files
+.cargo/
+
+# Package manager files (keep lock files, exclude others)
+.npm/
+.yarn/
+yarn.lock
+package-lock.json
+
+# Build tools
+rust-toolchain
+Makefile
+
+# Documentation
+README.md
+docs/
+KNOWLEDGE.md
+
+# License and metadata
+LICENSE*
+CHANGELOG.md
+CONTRIBUTING.md
+
+# Development configs
+.editorconfig
+.prettierrc*
+biome.json
+**/biome.json
+.eslintrc*
+tsconfig*.json
+**/tsconfig*.json
+vite.config.ts
+vitest.config.ts
+tailwind.config.js
+postcss.config.js
+
+# Ignore everything in root except what we need
+/*
+!Cargo.toml
+!Cargo.lock
+!rust-toolchain.toml
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!packages/

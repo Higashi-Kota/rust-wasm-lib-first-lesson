@@ -1,0 +1,42 @@
+{
+  "dependencies": {
+    "nanoid": "^5.1.5",
+    "ts-pattern": "^5.7.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@internal/shared-config": "workspace:*",
+    "@vitest/coverage-v8": "^3.1.4",
+    "@vitest/ui": "^3.1.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "name": "@internal/utils",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "check": "biome check src",
+    "check:fix": "biome check src --fix --unsafe",
+    "dev": "tsc --watch",
+    "format": "biome format --write src",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "typecheck": "tsc --build --noEmit"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "version": "0.0.0"
+}

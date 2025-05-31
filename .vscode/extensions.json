@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "biomejs.biome",
+    "rust-lang.rust-analyzer",
+    "tamasfe.even-better-toml"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript",
+    "dbaeumer.vscode-eslint"
+  ]
+}

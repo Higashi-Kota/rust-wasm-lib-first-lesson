@@ -1,0 +1,5 @@
+packages:
+  # フロントエンドアプリ
+  - "packages/*"
+  # WASMクレートのビルド成果物（pkg/フォルダ）
+  - "packages/crates/*/pkg"

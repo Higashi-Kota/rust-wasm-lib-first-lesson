@@ -1,0 +1,18 @@
+{
+  "exports": {
+    "./biome": "./biome.json",
+    "./tailwind": "./tailwind.config.js",
+    "./tsconfig": "./tsconfig.base.json",
+    "./tsconfig-lib": "./tsconfig.lib.json"
+  },
+  "files": [
+    "biome.json",
+    "tsconfig.base.json",
+    "tsconfig.lib.json",
+    "tailwind.config.js"
+  ],
+  "name": "@internal/shared-config",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0"
+}
