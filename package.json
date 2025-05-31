@@ -1,9 +1,12 @@
 {
-  "name": "rust-wasm-react-starter",
+  "name": "rust-wasm-lib-first-lesson",
   "private": true,
   "version": "0.1.0",
-  "description": "Rust WASM × React スターターキット with モノレポ構成",
-  "workspaces": ["packages/*", "packages/crates/*/pkg"],
+  "description": "@nap5/gnrng-id - Rust WASM × TypeScript ID Generator Library",
+  "workspaces": [
+    "packages/*", 
+    "packages/crates/*/pkg"
+  ],
   "type": "module",
   "scripts": {
     "clean:modules": "find packages -type d -name node_modules -prune -exec rm -rf {} +",
@@ -14,40 +17,55 @@
     
     "build:wasm": "make build-wasm-dev",
     "build:wasm:prod": "make build-wasm-prod",
+    "build:lib": "make build-lib",
     "watch:wasm": "make watch-wasm",
+    "watch:lib": "make watch-lib",
     
     "dev": "pnpm --filter app dev",
-    "dev:all": "concurrently \"pnpm run watch:wasm\" \"pnpm --filter app dev\" --names \"wasm,app\" --prefix-colors \"orange,green\"",
-    "dev:watch": "concurrently \"pnpm --filter @internal/utils dev\" \"pnpm run watch:wasm\" \"pnpm --filter app dev\" --names \"utils,wasm,app\" --prefix-colors \"yellow,orange,green\"",
+    "dev:lib": "concurrently \"pnpm run watch:wasm\" \"pnpm run watch:lib\" --names \"wasm,lib\" --prefix-colors \"orange,yellow\"",
+    "dev:all": "make dev-all",
+    "dev:watch": "concurrently \"pnpm run watch:lib\" \"pnpm run watch:wasm\" \"pnpm --filter app dev\" --names \"lib,wasm,app\" --prefix-colors \"yellow,orange,green\"",
     
-    "build": "pnpm run build:wasm:prod && pnpm run build:utils && pnpm -r --filter app build",
+    "build": "make build",
     "build:utils": "pnpm --filter @internal/utils build",
+    "prepare": "make prepare",
     
-    "preview": "pnpm -r preview",
-    "format": "pnpm run format:rust && pnpm run format:ts",
+    "preview": "pnpm --filter app preview",
+    "format": "make format",
     "format:ts": "pnpm -r --parallel format",
     "format:rust": "cargo fmt --all",
-    "check": "pnpm run check:rust && pnpm run check:ts",
+    "check": "make check",
     "check:ts": "pnpm -r --parallel check",
     "check:rust": "cargo clippy --workspace --all-targets -- -D warnings",
     "check:fix": "pnpm -r --parallel check:fix",
     "typecheck": "pnpm -r --parallel typecheck",
     "package:check": "pnpm -r --parallel package:check",
     
-    "test": "pnpm run test:rust && pnpm run test:ts",
-    "test:ts": "pnpm -r --parallel test:run",
-    "test:rust": "cargo test --workspace",
-    "test:utils": "pnpm --filter @internal/utils test",
+    "test": "make test",
+    "test:ts": "make test-ts",
+    "test:rust": "make test-rust", 
+    "test:lib": "pnpm --filter @nap5/gnrng-id test",
     "test:app": "pnpm --filter app test",
     "test:run": "pnpm -r --parallel test:run",
     "test:ui": "pnpm --filter app test:ui",
     "test:coverage": "pnpm -r --parallel test:coverage",
     "test:watch": "pnpm -r --parallel test",
     
+    "benchmark": "make benchmark",
+    "benchmark:lib": "pnpm --filter @nap5/gnrng-id benchmark",
+    
     "install:all": "pnpm run build:wasm && pnpm install",
     "setup": "pnpm run install:all",
     
-    "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings"
+    "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings",
+    
+    "publish:npm": "make publish-npm",
+    "publish:jsr": "make publish-jsr", 
+    "publish:all": "make publish-all",
+    
+    "demo:dev": "pnpm run dev:all",
+    "demo:build": "pnpm run build && pnpm --filter app build",
+    "demo:preview": "pnpm --filter app preview"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
@@ -65,10 +83,22 @@
     "rust",
     "webassembly",
     "wasm",
-    "react",
+    "gnrng",
+    "random",
+    "id-generator",
     "typescript",
-    "vite",
-    "monorepo",
-    "pnpm-workspace"
-  ]
+    "library",
+    "deterministic",
+    "performance"
+  ],
+  "author": "Higashi Kota <higashi.kota@gri.jp>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson/issues"
+  },
+  "homepage": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson#readme"
 }

@@ -1,7 +1,13 @@
 [package]
-name = "wasm-math"
+name = "gnrng-id"
 version = "0.1.0"
 edition = "2021"
+authors = ["Higashi Kota <higashi.kota@gri.jp>"]
+description = "GNRNG (Good Night Random Number Generator) with ID generation utilities for WebAssembly"
+repository = "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson"
+license = "MIT"
+keywords = ["wasm", "webassembly", "random", "id", "gnrng"]
+categories = ["wasm", "web-programming"]
 
 [lib]
 # cdylibはWASMバイナリの生成に必要
@@ -11,6 +17,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # ワークスペースの共通依存関係を使用
 wasm-bindgen = { workspace = true }
+js-sys = { workspace = true }
 
 # コンソール出力用（デバッグ時に便利）
 console_error_panic_hook = { version = "0.1.7", optional = true }
@@ -20,6 +27,9 @@ wee_alloc = { version = "0.4.5", optional = true }
 workspace = true
 features = [
   "console",
+  "crypto",
+  "Crypto",
+  "SubtleCrypto",
 ]
 
 # フィーチャーの定義

@@ -1,0 +1,65 @@
+{
+  "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "exactOptionalPropertyTypes": true,
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noUncheckedIndexedAccess": true,
+    "strict": true,
+    "target": "ES2022"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "fmt": {
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "proseWrap": "preserve",
+    "semiColons": false,
+    "singleQuote": true,
+    "useTabs": false
+  },
+  "imports": {
+    "@internal/utils": "../utils/src/index.ts",
+    "@nap5/gnrng-id-wasm": "../crates/gnrng-id/pkg/gnrng_id.js"
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-slow-types"],
+      "tags": ["recommended"]
+    }
+  },
+  "name": "@nap5/gnrng-id",
+  "permissions": {
+    "env": false,
+    "ffi": true,
+    "net": false,
+    "read": true,
+    "run": false,
+    "write": false
+  },
+  "publish": {
+    "exclude": [
+      "src/**/*.test.ts",
+      "src/**/*.spec.ts",
+      "src/**/*.bench.ts",
+      "src/**/*.benchmark.ts",
+      "dist/",
+      "node_modules/",
+      ".git/",
+      "*.tsbuildinfo"
+    ],
+    "include": ["src/", "README.md", "LICENSE"]
+  },
+  "tasks": {
+    "bench": "deno bench --allow-all src/",
+    "build": "deno run -A npm:tsup",
+    "check": "deno check src/index.ts",
+    "fmt": "deno fmt src/",
+    "lint": "deno lint src/",
+    "test": "deno test --allow-all src/"
+  },
+  "unstable": ["ffi"],
+  "version": "0.1.0"
+}

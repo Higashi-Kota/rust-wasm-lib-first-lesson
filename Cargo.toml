@@ -1,9 +1,7 @@
 [workspace]
 # Rustクレートのワークスペース定義
 members = [
-    "packages/crates/wasm-math",
-    "packages/crates/wasm-text", 
-    "packages/crates/wasm-utils",
+    "packages/crates/gnrng-id",
 ]
 resolver = "2"
 

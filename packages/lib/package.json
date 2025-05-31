@@ -1,0 +1,94 @@
+{
+  "author": "Higashi Kota <higashi.kota@gri.jp>",
+  "bugs": {
+    "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson/issues"
+  },
+  "dependencies": {
+    "@nap5/gnrng-id-wasm": "workspace:../crates/gnrng-id/pkg"
+  },
+  "description": "GNRNG (Good Night Random Number Generator) with ID generation utilities powered by WebAssembly",
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@internal/shared-config": "workspace:*",
+    "@internal/utils": "workspace:*",
+    "@vitest/coverage-v8": "^3.1.4",
+    "@vitest/ui": "^3.1.4",
+    "tsup": "^8.3.5",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/sponsors/Higashi-Kota"
+  },
+  "homepage": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson#readme",
+  "keywords": [
+    "wasm",
+    "webassembly",
+    "random",
+    "id",
+    "gnrng",
+    "generator",
+    "typescript",
+    "rust"
+  ],
+  "license": "MIT",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "name": "@nap5/gnrng-id",
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "directory": "packages/lib",
+    "type": "git",
+    "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson.git"
+  },
+  "scripts": {
+    "benchmark": "vitest run --reporter=verbose src/benchmark.test.ts",
+    "build": "pnpm run build:wasm && pnpm run build:lib",
+    "build:lib": "tsup",
+    "build:wasm": "wasm-pack build ../crates/gnrng-id --target web --scope nap5 --release",
+    "build:watch": "tsup --watch",
+    "check": "biome check src",
+    "check:fix": "biome check src --fix --unsafe",
+    "clean": "rm -rf dist ../crates/gnrng-id/pkg",
+    "dev": "pnpm run build:wasm && tsup --watch",
+    "format": "biome format --write src",
+    "lint": "biome lint src",
+    "lint:fix": "biome lint src --fix --unsafe",
+    "prepublishOnly": "pnpm run build && pnpm run test:run",
+    "publish:jsr": "jsr publish",
+    "publish:npm": "npm publish --access public",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "version": "0.1.0"
+}
