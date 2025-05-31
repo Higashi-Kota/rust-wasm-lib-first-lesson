@@ -136,20 +136,6 @@ export function Footer() {
             </div>
           </div>
         </div>
-
-        {/* クイックスタート */}
-        <div className="p-4 mt-6 bg-gray-800 border border-gray-700 rounded-lg">
-          <h5 className="mb-2 text-sm font-medium text-white">
-            🚀 Quick Start
-          </h5>
-          <pre className="overflow-x-auto text-xs text-gray-300">
-            {`import { initWasm, createId, createIdBySeed } from '@nap5/gnrng-id'
-
-await initWasm()
-const randomId = createId()          // "t_A7Bp9X2"
-const seededId = createIdBySeed('my-seed')  // deterministic`}
-          </pre>
-        </div>
       </div>
     </footer>
   )

@@ -78,22 +78,6 @@ export function Header() {
             <p className="text-gray-600">
               高性能な決定的乱数生成とID作成ユーティリティ
             </p>
-
-            {/* パフォーマンス指標 */}
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center text-green-600">
-                <span className="mr-1">⚡</span>
-                <span className="font-medium">5.6x faster</span>
-              </div>
-              <div className="flex items-center text-blue-600">
-                <span className="mr-1">🔒</span>
-                <span className="font-medium">Deterministic</span>
-              </div>
-              <div className="flex items-center text-purple-600">
-                <span className="mr-1">📦</span>
-                <span className="font-medium">Type Safe</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

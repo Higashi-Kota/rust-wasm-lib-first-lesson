@@ -1,18 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
-import {
-  Gnrng,
-  IdType,
-  createIdBySeed,
-  createIdsBySeed,
-  gnrng,
-  initWasm,
-} from './index'
+import { Gnrng, IdType, createIdBySeed, createIdsBySeed, gnrng, initWasm } from './index'
 
 // 既存実装との比較用（互換性テスト）
-import {
-  createIdBySeed as utilsCreateIdBySeed,
-  gnrng as utilsGnrng,
-} from '@internal/utils'
+import { createIdBySeed as utilsCreateIdBySeed, gnrng as utilsGnrng } from '@internal/utils'
 
 describe('@nap5/gnrng-id (Mixed Implementation)', () => {
   beforeAll(async () => {
@@ -204,9 +194,7 @@ describe('@nap5/gnrng-id (Mixed Implementation)', () => {
 
     it('should respect size parameter', () => {
       const id = createIdBySeed('test-seed', 12)
-      expect(id).toMatch(
-        /^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{12}$/
-      )
+      expect(id).toMatch(/^t_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{12}$/)
     })
 
     it('should respect type parameter', () => {
@@ -215,12 +203,8 @@ describe('@nap5/gnrng-id (Mixed Implementation)', () => {
       const projectId = createIdBySeed('test-seed', 7, IdType.Project)
       const defaultId = createIdBySeed('test-seed', 7, IdType.Default)
 
-      expect(userId).toMatch(
-        /^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
-      )
-      expect(teamId).toMatch(
-        /^tm_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
-      )
+      expect(userId).toMatch(/^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/)
+      expect(teamId).toMatch(/^tm_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/)
       expect(projectId).toMatch(
         /^p_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{7}$/
       )
@@ -232,8 +216,7 @@ describe('@nap5/gnrng-id (Mixed Implementation)', () => {
     it('should use safe alphabet only', () => {
       const id = createIdBySeed('alphabet-test', 50) // Large size to test alphabet
       const idContent = id.slice(2) // Remove prefix
-      const safeAlphabet =
-        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+      const safeAlphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
       for (const char of idContent) {
         expect(safeAlphabet).toContain(char)
@@ -250,9 +233,7 @@ describe('@nap5/gnrng-id (Mixed Implementation)', () => {
 
     it('should generate consistent results across multiple calls', () => {
       const seed = 'consistency-test'
-      const ids = Array.from({ length: 10 }, () =>
-        createIdBySeed(seed, 8, IdType.User)
-      )
+      const ids = Array.from({ length: 10 }, () => createIdBySeed(seed, 8, IdType.User))
 
       // 全て同じIDになるはず（決定的）
       const uniqueIds = new Set(ids)
@@ -293,9 +274,7 @@ describe('@nap5/gnrng-id (Mixed Implementation)', () => {
       expect(ids).toHaveLength(3)
 
       for (const id of ids) {
-        expect(id).toMatch(
-          /^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{10}$/
-        )
+        expect(id).toMatch(/^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{10}$/)
       }
     })
 
@@ -313,12 +292,7 @@ describe('@nap5/gnrng-id (Mixed Implementation)', () => {
 
     it('should be efficient for large batches', () => {
       const start = performance.now()
-      const largeIds = createIdsBySeed(
-        'performance-test',
-        1000,
-        8,
-        IdType.Default
-      )
+      const largeIds = createIdsBySeed('performance-test', 1000, 8, IdType.Default)
       const end = performance.now()
 
       expect(largeIds).toHaveLength(1000)
@@ -384,9 +358,7 @@ describe('@nap5/gnrng-id (Mixed Implementation)', () => {
       const id2 = createIdBySeed('integration-test', 8, IdType.User)
 
       expect(id1).toBe(id2) // 決定的
-      expect(id1).toMatch(
-        /^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{8}$/
-      )
+      expect(id1).toMatch(/^u_[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{8}$/)
     })
 
     it('should maintain consistency between individual and batch operations', () => {

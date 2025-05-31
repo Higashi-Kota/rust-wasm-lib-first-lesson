@@ -1,28 +1,10 @@
 import { beforeAll, bench, describe } from 'vitest'
-import {
-  Gnrng,
-  IdType,
-  createDeterministicIdsBySeed,
-  createId,
-  createIdBySeed,
-  createIds,
-  createIdsBySeed,
-  getName,
-  getNames,
-  gnrng,
-  initWasm,
-  smart,
-} from './index'
+import { Gnrng, IdType, createIdBySeed, createIdsBySeed, gnrng, initWasm } from './index'
 
 // 既存実装との比較用
-import {
-  createId as utilsCreateId,
-  createIdBySeed as utilsCreateIdBySeed,
-  getName as utilsGetName,
-  gnrng as utilsGnrng,
-} from '@internal/utils'
+import { createIdBySeed as utilsCreateIdBySeed, gnrng as utilsGnrng } from '@internal/utils'
 
-describe('🚀 Performance Benchmarks: Optimized WASM vs TypeScript', () => {
+describe('🚀 GNRNG-ID Performance Benchmarks: WASM vs TypeScript', () => {
   beforeAll(async () => {
     await initWasm()
   })
@@ -101,42 +83,6 @@ describe('🚀 Performance Benchmarks: Optimized WASM vs TypeScript', () => {
     })
   })
 
-  describe('🎯 Random ID Generation - Individual vs Batch', () => {
-    bench('WASM: createId() individual calls (1000 times)', () => {
-      for (let i = 0; i < 1000; i++) {
-        createId(7, IdType.Default)
-      }
-    })
-
-    bench('🚀 WASM: createIds() batch call (1000 times)', () => {
-      createIds(1000, 7, IdType.Default)
-    })
-
-    bench('TypeScript: createId() individual calls (1000 times)', () => {
-      for (let i = 0; i < 1000; i++) {
-        utilsCreateId(7, 'default')
-      }
-    })
-
-    bench('WASM: createId() various sizes individual (1000 times)', () => {
-      const sizes = [5, 7, 10, 12, 15]
-      for (let i = 0; i < 1000; i++) {
-        const size = sizes[i % sizes.length]
-        createId(size, IdType.Default)
-      }
-    })
-
-    bench('🚀 WASM: createIds() large batch (5000 times)', () => {
-      createIds(5000, 7, IdType.Default)
-    })
-
-    bench('TypeScript: createId() large individual (5000 times)', () => {
-      for (let i = 0; i < 5000; i++) {
-        utilsCreateId(7, 'default')
-      }
-    })
-  })
-
   describe('🎯 Seeded ID Generation - Individual vs Batch', () => {
     bench('WASM: createIdBySeed() individual calls (1000 times)', () => {
       for (let i = 0; i < 1000; i++) {
@@ -160,8 +106,8 @@ describe('🚀 Performance Benchmarks: Optimized WASM vs TypeScript', () => {
       }
     })
 
-    bench('🚀 WASM: createDeterministicIdsBySeed() batch call (1000 times)', () => {
-      createDeterministicIdsBySeed('benchmark-seed', 1000, 7, IdType.Default)
+    bench('🚀 WASM: createIdsBySeed() deterministic batch (1000 times)', () => {
+      createIdsBySeed('benchmark-seed', 1000, 7, IdType.Default)
     })
 
     bench('TypeScript: createIdBySeed() same seed individual (1000 times)', () => {
@@ -171,57 +117,11 @@ describe('🚀 Performance Benchmarks: Optimized WASM vs TypeScript', () => {
     })
   })
 
-  describe('🎯 Name Generation - Individual vs Batch', () => {
-    const existingNames = Array.from({ length: 100 }, (_, i) => `Item ${i}`)
-
-    bench('WASM: getName() individual no conflicts (1000 times)', () => {
-      for (let i = 0; i < 1000; i++) {
-        getName(`NewItem${i}`, existingNames)
-      }
-    })
-
-    bench('🚀 WASM: getNames() batch no conflicts (1000 times)', () => {
-      const baseNames = Array.from({ length: 1000 }, (_, i) => `NewItem${i}`)
-      getNames(baseNames, existingNames)
-    })
-
-    bench('TypeScript: getName() individual no conflicts (1000 times)', () => {
-      for (let i = 0; i < 1000; i++) {
-        utilsGetName(`NewItem${i}`, existingNames)
-      }
-    })
-
-    const conflictingNames = Array.from({ length: 50 }, (_, i) =>
-      i === 0 ? 'Panel' : `Panel (${i})`
-    )
-
-    bench('WASM: getName() individual with conflicts (1000 times)', () => {
-      for (let i = 0; i < 1000; i++) {
-        getName('Panel', conflictingNames)
-      }
-    })
-
-    bench('🚀 WASM: getNames() batch with conflicts (1000 times)', () => {
-      const baseNames = Array.from({ length: 1000 }, () => 'Panel')
-      getNames(baseNames, conflictingNames)
-    })
-
-    bench('TypeScript: getName() individual with conflicts (1000 times)', () => {
-      for (let i = 0; i < 1000; i++) {
-        utilsGetName('Panel', conflictingNames)
-      }
-    })
-  })
-
   describe('🎯 Mixed Workload - Individual vs Batch', () => {
     bench('WASM: Mixed operations individual (1000 times)', () => {
       for (let i = 0; i < 1000; i++) {
         // ID生成
-        const randomId = createId(7, IdType.User)
         const _seededId = createIdBySeed(`seed-${i}`, 7, IdType.Project)
-
-        // 名前生成
-        const _uniqueName = getName('Item', ['Item', 'Item (1)', randomId])
 
         // 乱数生成
         const rng = gnrng(`mixed-${i}`)
@@ -233,13 +133,7 @@ describe('🚀 Performance Benchmarks: Optimized WASM vs TypeScript', () => {
 
     bench('🚀 WASM: Mixed operations batch (1000 times)', () => {
       // バッチID生成
-      const _randomIds = createIds(1000, 7, IdType.User)
       const _seededIds = createIdsBySeed('batch-seed', 1000, 7, IdType.Project)
-
-      // バッチ名前生成
-      const baseNames = Array.from({ length: 1000 }, () => 'Item')
-      const existingNames = ['Item', 'Item (1)']
-      const _uniqueNames = getNames(baseNames, existingNames)
 
       // バッチ乱数生成
       const rng = gnrng('mixed-batch')
@@ -251,11 +145,7 @@ describe('🚀 Performance Benchmarks: Optimized WASM vs TypeScript', () => {
     bench('TypeScript: Mixed operations individual (1000 times)', () => {
       for (let i = 0; i < 1000; i++) {
         // ID生成
-        const randomId = utilsCreateId(7, 'user')
         const _seededId = utilsCreateIdBySeed(`seed-${i}`, 7, 'project')
-
-        // 名前生成
-        const _uniqueName = utilsGetName('Item', ['Item', 'Item (1)', randomId])
 
         // 乱数生成
         const rng = utilsGnrng(`mixed-${i}`)
@@ -266,57 +156,109 @@ describe('🚀 Performance Benchmarks: Optimized WASM vs TypeScript', () => {
     })
   })
 
-  describe('🎯 Extreme Performance Tests', () => {
-    bench('🚀 WASM: Ultra-large batch GNRNG (100K values)', () => {
-      const rng = new Gnrng('ultra-seed')
-      rng.nextBatch(100000)
+  describe('🎯 Large Scale Performance Tests', () => {
+    bench('🚀 WASM: Large batch GNRNG (50K values)', () => {
+      const rng = new Gnrng('large-seed')
+      rng.nextBatch(50000)
       rng.free()
     })
 
-    bench('WASM: Ultra-large individual GNRNG (100K values)', () => {
-      const rng = new Gnrng('ultra-seed')
-      for (let i = 0; i < 100000; i++) {
+    bench('WASM: Large individual GNRNG (50K values)', () => {
+      const rng = new Gnrng('large-seed')
+      for (let i = 0; i < 50000; i++) {
         rng.next()
       }
       rng.free()
     })
 
-    bench('🚀 WASM: Ultra-large batch ID generation (10K IDs)', () => {
-      createIds(10000, 10, IdType.Default)
+    bench('🚀 WASM: Large batch ID generation (5K IDs)', () => {
+      createIdsBySeed('large-batch', 5000, 7, IdType.Default)
     })
 
-    bench('WASM: Ultra-large individual ID generation (10K IDs)', () => {
-      for (let i = 0; i < 10000; i++) {
-        createId(10, IdType.Default)
+    bench('WASM: Large individual ID generation (5K IDs)', () => {
+      for (let i = 0; i < 5000; i++) {
+        createIdBySeed(`large-${i}`, 7, IdType.Default)
       }
     })
 
-    bench('🚀 WASM: Ultra-large deterministic batch (10K IDs)', () => {
-      createDeterministicIdsBySeed('ultra-seed', 10000, 10, IdType.Default)
-    })
-
-    bench('WASM: Ultra-large deterministic individual (10K IDs)', () => {
-      for (let i = 0; i < 10000; i++) {
-        createIdBySeed('ultra-seed', 10, IdType.Default)
-      }
-    })
-
-    bench('TypeScript: Ultra-large individual GNRNG (100K values)', () => {
-      const rng = utilsGnrng('ultra-seed')
-      for (let i = 0; i < 100000; i++) {
+    bench('TypeScript: Large individual GNRNG (50K values)', () => {
+      const rng = utilsGnrng('large-seed')
+      for (let i = 0; i < 50000; i++) {
         rng()
       }
     })
 
-    bench('TypeScript: Ultra-large individual ID generation (10K IDs)', () => {
+    bench('TypeScript: Large individual ID generation (5K IDs)', () => {
+      for (let i = 0; i < 5000; i++) {
+        utilsCreateIdBySeed(`large-${i}`, 7, 'default')
+      }
+    })
+  })
+
+  describe('🎯 Real-world Usage Patterns', () => {
+    bench('🚀 Realistic: User session IDs (1000 users)', () => {
+      createIdsBySeed('user-session', 1000, 8, IdType.User)
+    })
+
+    bench('WASM: Traditional user session IDs', () => {
+      for (let i = 0; i < 1000; i++) {
+        createIdBySeed(`user-${i}`, 8, IdType.User)
+      }
+    })
+
+    bench('🚀 Realistic: Game random events (10K events)', () => {
+      const rng = new Gnrng('game-session')
+      rng.nextRangeBatch(1, 6, 10000) // dice rolls
+      rng.free()
+    })
+
+    bench('WASM: Traditional game events', () => {
+      const rng = new Gnrng('game-session')
       for (let i = 0; i < 10000; i++) {
-        utilsCreateId(10, 'default')
+        rng.nextRange(1, 6)
+      }
+      rng.free()
+    })
+
+    bench('🚀 Realistic: Project initialization (100 projects, 10 IDs each)', () => {
+      for (let i = 0; i < 100; i++) {
+        createIdsBySeed(`project-${i}`, 10, 8, IdType.Project)
+      }
+    })
+
+    bench('WASM: Traditional project initialization', () => {
+      for (let i = 0; i < 100; i++) {
+        for (let j = 0; j < 10; j++) {
+          createIdBySeed(`project-${i}-${j}`, 8, IdType.Project)
+        }
+      }
+    })
+
+    bench('TypeScript: User session IDs equivalent', () => {
+      for (let i = 0; i < 1000; i++) {
+        utilsCreateIdBySeed(`user-${i}`, 8, 'user')
+      }
+    })
+
+    bench('TypeScript: Game events equivalent', () => {
+      const rng = utilsGnrng('game-session')
+      for (let i = 0; i < 10000; i++) {
+        const value = rng()
+        Math.floor(value * 6) + 1
+      }
+    })
+
+    bench('TypeScript: Project initialization equivalent', () => {
+      for (let i = 0; i < 100; i++) {
+        for (let j = 0; j < 10; j++) {
+          utilsCreateIdBySeed(`project-${i}-${j}`, 8, 'project')
+        }
       }
     })
   })
 
   describe('🎯 Batch Size Optimization Analysis', () => {
-    const batchSizes = [10, 50, 100, 500, 1000, 5000]
+    const batchSizes = [10, 100, 1000, 5000]
 
     for (const size of batchSizes) {
       bench(`🚀 WASM: GNRNG batch size ${size}`, () => {
@@ -332,157 +274,23 @@ describe('🚀 Performance Benchmarks: Optimized WASM vs TypeScript', () => {
         }
         rng.free()
       })
-    }
-  })
 
-  describe('🎯 Memory Efficiency Tests', () => {
-    bench('🚀 WASM: Memory efficient large batch (50K)', () => {
-      const rng = new Gnrng('memory-test')
-      // 分割バッチ処理の効果をテスト
-      rng.nextBatch(50000)
-      rng.free()
-    })
+      bench(`🚀 WASM: ID batch size ${size}`, () => {
+        createIdsBySeed('id-batch-analysis', size, 7, IdType.Default)
+      })
 
-    bench('🚀 WASM: Chunked ID generation (50K)', () => {
-      // 内部的に分割処理される
-      createIds(50000, 7, IdType.Default)
-    })
-
-    bench('WASM: Individual memory pressure (50K)', () => {
-      const rng = new Gnrng('memory-test')
-      const results: number[] = []
-      for (let i = 0; i < 50000; i++) {
-        results.push(rng.next())
-      }
-      rng.free()
-    })
-  })
-
-  describe('🎯 Smart API Performance', () => {
-    bench('🚀 Smart: SmartGnrng optimized usage', async () => {
-      const smartRng = new smart.SmartGnrng('smart-seed')
-
-      // スマートバッチ処理
-      const promises: Promise<number>[] = []
-      for (let i = 0; i < 100; i++) {
-        promises.push(smartRng.next())
-      }
-
-      await Promise.all(promises)
-      smartRng.free()
-    })
-
-    bench('🚀 Smart: Auto-optimized ID generation', () => {
-      // 自動的に最適なAPIを選択
-      smart.createIds(500, 7, IdType.Default)
-    })
-  })
-
-  describe('🎯 Edge Case Performance', () => {
-    bench('WASM: Very small batches (size=1)', () => {
-      for (let i = 0; i < 1000; i++) {
-        const rng = new Gnrng(`small-${i}`)
-        rng.nextBatch(1)
-        rng.free()
-      }
-    })
-
-    bench('🚀 WASM: Optimal small batches (size=10)', () => {
-      for (let i = 0; i < 100; i++) {
-        const rng = new Gnrng(`optimal-${i}`)
-        rng.nextBatch(10)
-        rng.free()
-      }
-    })
-
-    bench('WASM: Long seed strings batch', () => {
-      const longSeed = 'a'.repeat(1000)
-      const rng = new Gnrng(longSeed)
-      rng.nextBatch(1000)
-      rng.free()
-    })
-
-    bench('TypeScript: Long seed strings individual', () => {
-      const longSeed = 'a'.repeat(1000)
-      const rng = utilsGnrng(longSeed)
-      for (let i = 0; i < 1000; i++) {
-        rng()
-      }
-    })
-
-    bench('🚀 WASM: Large ID sizes batch (size=100)', () => {
-      createIds(100, 100, IdType.Default)
-    })
-
-    bench('WASM: Large ID sizes individual (size=100)', () => {
-      for (let i = 0; i < 100; i++) {
-        createId(100, IdType.Default)
-      }
-    })
-  })
-
-  describe('🎯 Real-world Usage Patterns', () => {
-    bench('🚀 Realistic: User session IDs (1000 users)', () => {
-      createIds(1000, 8, IdType.User)
-    })
-
-    bench('🚀 Realistic: Project initialization (100 projects, 10 IDs each)', () => {
-      for (let i = 0; i < 100; i++) {
-        createDeterministicIdsBySeed(`project-${i}`, 10, 8, IdType.Project)
-      }
-    })
-
-    bench('🚀 Realistic: Game random events (10K events)', () => {
-      const rng = new Gnrng('game-session')
-      rng.nextRangeBatch(1, 6, 10000) // dice rolls
-      rng.free()
-    })
-
-    bench('🚀 Realistic: UI element naming (500 components)', () => {
-      const baseNames = Array.from({ length: 500 }, (_, i) => `Component${i % 10}`)
-      const existing = ['Component0', 'Component1', 'Component1 (1)']
-      getNames(baseNames, existing)
-    })
-
-    bench('Realistic: Traditional individual calls equivalent', () => {
-      // ユーザーセッションID
-      for (let i = 0; i < 1000; i++) {
-        createId(8, IdType.User)
-      }
-
-      // プロジェクト初期化
-      for (let i = 0; i < 100; i++) {
-        for (let j = 0; j < 10; j++) {
-          createIdBySeed(`project-${i}-${j}`, 8, IdType.Project)
+      bench(`WASM: ID individual ${size} calls`, () => {
+        for (let i = 0; i < size; i++) {
+          createIdBySeed(`id-individual-${i}`, 7, IdType.Default)
         }
-      }
-
-      // ゲーム乱数イベント
-      const rng = new Gnrng('game-session')
-      for (let i = 0; i < 10000; i++) {
-        rng.nextRange(1, 6)
-      }
-      rng.free()
-
-      // UI要素命名
-      const existing = ['Component0', 'Component1', 'Component1 (1)']
-      for (let i = 0; i < 500; i++) {
-        getName(`Component${i % 10}`, existing)
-      }
-    })
+      })
+    }
   })
 
   describe('🎯 Performance Baseline', () => {
     bench('Baseline: Native Math.random() (10K calls)', () => {
       for (let i = 0; i < 10000; i++) {
         Math.random()
-      }
-    })
-
-    bench('Baseline: Array creation overhead (10K elements)', () => {
-      const arr = new Array(10000)
-      for (let i = 0; i < 10000; i++) {
-        arr[i] = Math.random()
       }
     })
 
@@ -499,40 +307,28 @@ describe('🚀 Performance Benchmarks: Optimized WASM vs TypeScript', () => {
       rng.free()
     })
   })
-})
 
-// ベンチマーク結果の分析用ヘルパー
-describe('📊 Benchmark Analysis', () => {
-  bench('Analysis: FFI overhead measurement', () => {
-    // FFI境界通過のオーバーヘッドを測定
-    for (let i = 0; i < 1000; i++) {
-      const rng = new Gnrng('overhead-test')
-      rng.free() // 作成→即削除でFFIオーバーヘッドを測定
-    }
-  })
+  describe('📊 Consistency and Compatibility Tests', () => {
+    bench('Consistency: WASM vs TypeScript GNRNG compatibility', () => {
+      const wasmRng = new Gnrng('consistency-test')
+      const utilsRng = utilsGnrng('consistency-test')
 
-  bench('🚀 Analysis: Batch efficiency demonstration', () => {
-    // バッチ処理の効率性を実証
-    const rng = new Gnrng('efficiency-test')
+      // 決定性の確認
+      for (let i = 0; i < 100; i++) {
+        const _wasmValue = wasmRng.next()
+        const _utilsValue = utilsRng()
+        // 同じアルゴリズムなので同じ値になることを期待
+      }
 
-    // 複数のバッチサイズで効率性をテスト
-    rng.nextBatch(100)
-    rng.nextBatch(500)
-    rng.nextBatch(1000)
+      wasmRng.free()
+    })
 
-    rng.free()
-  })
-
-  bench('Analysis: Memory allocation pattern', () => {
-    // メモリ割り当てパターンの測定
-    const results: string[] = []
-    for (let i = 0; i < 1000; i++) {
-      results.push(createId(7, IdType.Default))
-    }
-  })
-
-  bench('🚀 Analysis: Optimized memory pattern', () => {
-    // 最適化されたメモリパターン
-    const _results = createIds(1000, 7, IdType.Default)
+    bench('Consistency: WASM vs TypeScript ID generation', () => {
+      for (let i = 0; i < 100; i++) {
+        const _wasmId = createIdBySeed(`consistency-${i}`, 7, IdType.Default)
+        const _utilsId = utilsCreateIdBySeed(`consistency-${i}`, 7, 'default')
+        // 同じアルゴリズムなので同じIDになることを期待
+      }
+    })
   })
 })

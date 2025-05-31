@@ -4,21 +4,13 @@ import { useState } from 'react'
 import {
   IdType,
   Gnrng as WasmGnrng,
-  smart,
-  createDeterministicIdsBySeed as wasmCreateDeterministicIdsBySeed,
-  createId as wasmCreateId,
   createIdBySeed as wasmCreateIdBySeed,
-  createIds as wasmCreateIds,
   createIdsBySeed as wasmCreateIdsBySeed,
-  getName as wasmGetName,
-  getNames as wasmGetNames,
 } from '@nap5/gnrng-id'
 
 // TypeScript implementation for comparison
 import {
-  createId as utilsCreateId,
   createIdBySeed as utilsCreateIdBySeed,
-  getName as utilsGetName,
   gnrng as utilsGnrng,
 } from '@internal/utils'
 
@@ -32,10 +24,10 @@ interface BenchmarkResult {
   batchImprovement?: number
   iterations: number
   timestamp: Date
-  category: 'individual' | 'batch' | 'comparison'
+  category: 'gnrng' | 'id-generation' | 'mixed'
 }
 
-const PRESET_BATCH_SIZES = [
+const PRESET_SIZES = [
   { value: '100', label: '100 (小)' },
   { value: '1000', label: '1,000 (中)' },
   { value: '5000', label: '5,000 (大)' },
@@ -48,7 +40,6 @@ export function BenchmarkDemo() {
   const [selectedTest, setSelectedTest] = useState<string>('gnrng-batch')
   const [iterations, setIterations] = useState<string>('1000')
   const [batchSize, setBatchSize] = useState<string>('1000')
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false)
 
   const runBenchmark = async (
     name: string,
@@ -57,10 +48,10 @@ export function BenchmarkDemo() {
     wasmBatchFn: (() => void) | null,
     tsFn: () => void,
     iterationCount: number,
-    category: 'individual' | 'batch' | 'comparison' = 'individual'
+    category: BenchmarkResult['category']
   ): Promise<BenchmarkResult> => {
     // Warm up
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
       wasmFn()
       if (wasmBatchFn) wasmBatchFn()
       tsFn()
@@ -134,7 +125,7 @@ export function BenchmarkDemo() {
       switch (selectedTest) {
         case 'gnrng-batch':
           result = await runBenchmark(
-            'GNRNG Random Generation',
+            'GNRNG 乱数生成',
             `個別 vs バッチ (${batchCount}個ずつ)`,
             () => {
               const rng = new WasmGnrng('benchmark-seed')
@@ -151,13 +142,13 @@ export function BenchmarkDemo() {
               rng()
             },
             iterationCount,
-            'batch'
+            'gnrng'
           )
           break
 
         case 'gnrng-range-batch':
           result = await runBenchmark(
-            'GNRNG Range Generation',
+            'GNRNG 範囲乱数生成',
             `範囲乱数: 個別 vs バッチ (${batchCount}個ずつ)`,
             () => {
               const rng = new WasmGnrng('benchmark-seed')
@@ -175,134 +166,51 @@ export function BenchmarkDemo() {
               Math.floor(value * 99) + 1
             },
             iterationCount,
-            'batch'
-          )
-          break
-
-        case 'create-id-batch':
-          result = await runBenchmark(
-            'Random ID Creation',
-            `ID生成: 個別 vs バッチ (${batchCount}個ずつ)`,
-            () => wasmCreateId(7, IdType.Default),
-            () => wasmCreateIds(batchCount, 7, IdType.Default),
-            () => utilsCreateId(7, 'default'),
-            iterationCount,
-            'batch'
+            'gnrng'
           )
           break
 
         case 'create-id-seeded-batch':
           result = await runBenchmark(
-            'Seeded ID Creation',
-            `シードID: 個別 vs バッチ (${batchCount}個ずつ)`,
+            'シードID生成',
+            `個別 vs バッチ (${batchCount}個ずつ)`,
             () => wasmCreateIdBySeed('test-seed', 7, IdType.Default),
             () =>
               wasmCreateIdsBySeed('test-seed', batchCount, 7, IdType.Default),
             () => utilsCreateIdBySeed('test-seed', 7, 'default'),
             iterationCount,
-            'batch'
+            'id-generation'
           )
           break
 
-        case 'deterministic-id-batch':
+        case 'mixed-operations':
           result = await runBenchmark(
-            'Deterministic ID Creation',
-            `決定的ID: 個別 vs バッチ (${batchCount}個ずつ)`,
-            () => wasmCreateIdBySeed('deterministic-seed', 7, IdType.Default),
-            () =>
-              wasmCreateDeterministicIdsBySeed(
-                'deterministic-seed',
-                batchCount,
+            '混合処理',
+            `乱数 + ID生成の組み合わせ (${Math.min(batchCount, 100)}処理ずつ)`,
+            () => {
+              const rng = new WasmGnrng('mixed-seed')
+              rng.next()
+              rng.free()
+              wasmCreateIdBySeed('mixed-id', 7, IdType.Default)
+            },
+            () => {
+              const rng = new WasmGnrng('mixed-seed')
+              rng.nextBatch(Math.min(batchCount, 100))
+              rng.free()
+              wasmCreateIdsBySeed(
+                'mixed-id',
+                Math.min(batchCount, 100),
                 7,
                 IdType.Default
-              ),
-            () => utilsCreateIdBySeed('deterministic-seed', 7, 'default'),
-            iterationCount,
-            'batch'
-          )
-          break
-
-        case 'get-name-batch': {
-          const existingNames = ['Panel', 'Panel (1)', 'Panel (2)', 'Panel (3)']
-          const baseNames = Array.from({ length: batchCount }, () => 'Panel')
-
-          result = await runBenchmark(
-            'Unique Name Generation',
-            `名前生成: 個別 vs バッチ (${batchCount}個ずつ)`,
-            () => wasmGetName('Panel', existingNames),
-            () => wasmGetNames(baseNames, existingNames),
-            () => utilsGetName('Panel', existingNames),
-            iterationCount,
-            'batch'
-          )
-          break
-        }
-
-        case 'smart-optimization':
-          result = await runBenchmark(
-            'Smart Optimization',
-            `スマート最適化 vs 従来処理 (${batchCount}個)`,
-            () => {
-              for (let i = 0; i < Math.min(batchCount, 100); i++) {
-                wasmCreateId(7, IdType.Default)
-              }
+              )
             },
-            () => smart.createIds(batchCount, 7, IdType.Default),
             () => {
-              for (let i = 0; i < Math.min(batchCount, 100); i++) {
-                utilsCreateId(7, 'default')
-              }
+              const rng = utilsGnrng('mixed-seed')
+              rng()
+              utilsCreateIdBySeed('mixed-id', 7, 'default')
             },
             Math.floor(iterationCount / 10),
-            'batch'
-          )
-          break
-
-        case 'real-world-session':
-          result = await runBenchmark(
-            'Real-world: User Sessions',
-            `ユーザーセッション管理 (${batchCount}ユーザー)`,
-            () => {
-              for (let i = 0; i < Math.min(batchCount, 100); i++) {
-                wasmCreateId(8, IdType.User)
-              }
-            },
-            () => wasmCreateIds(batchCount, 8, IdType.User),
-            () => {
-              for (let i = 0; i < Math.min(batchCount, 100); i++) {
-                utilsCreateId(8, 'user')
-              }
-            },
-            Math.floor(iterationCount / 10),
-            'comparison'
-          )
-          break
-
-        case 'real-world-game':
-          result = await runBenchmark(
-            'Real-world: Game Events',
-            `ゲームランダムイベント (${batchCount}イベント)`,
-            () => {
-              const rng = new WasmGnrng('game-session')
-              for (let i = 0; i < Math.min(batchCount, 100); i++) {
-                rng.nextRange(1, 6)
-              }
-              rng.free()
-            },
-            () => {
-              const rng = new WasmGnrng('game-session')
-              rng.nextRangeBatch(1, 6, batchCount)
-              rng.free()
-            },
-            () => {
-              const rng = utilsGnrng('game-session')
-              for (let i = 0; i < Math.min(batchCount, 100); i++) {
-                const value = rng()
-                Math.floor(value * 6) + 1
-              }
-            },
-            Math.floor(iterationCount / 10),
-            'comparison'
+            'mixed'
           )
           break
 
@@ -323,27 +231,23 @@ export function BenchmarkDemo() {
     }
   }
 
-  const runComprehensiveBenchmark = async () => {
+  const runAllBenchmarks = async () => {
     if (isRunning) return
 
     setIsRunning(true)
-    const comprehensiveTests = [
+    const allTests = [
       'gnrng-batch',
       'gnrng-range-batch',
-      'create-id-batch',
       'create-id-seeded-batch',
-      'deterministic-id-batch',
-      'get-name-batch',
-      'real-world-session',
-      'real-world-game',
+      'mixed-operations',
     ]
 
     try {
-      for (const test of comprehensiveTests) {
+      for (const test of allTests) {
         setSelectedTest(test)
         await new Promise((resolve) => setTimeout(resolve, 100))
         await handleRunBenchmark()
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        await new Promise((resolve) => setTimeout(resolve, 300))
       }
     } finally {
       setIsRunning(false)
@@ -370,12 +274,12 @@ export function BenchmarkDemo() {
 
   const getCategoryBadge = (category: BenchmarkResult['category']): string => {
     switch (category) {
-      case 'batch':
-        return '🚀 バッチ最適化'
-      case 'comparison':
-        return '🔄 実用比較'
-      case 'individual':
-        return '📊 個別処理'
+      case 'gnrng':
+        return '🎲 乱数生成'
+      case 'id-generation':
+        return '🆔 ID生成'
+      case 'mixed':
+        return '🔄 混合処理'
     }
   }
 
@@ -383,7 +287,7 @@ export function BenchmarkDemo() {
     <section className="card">
       <h3 className="flex items-center section-title">
         <span className="mr-2">🚀</span>
-        バッチAPI Performance Benchmark
+        GNRNG-ID Performance Benchmark
       </h3>
 
       <div className="space-y-6">
@@ -408,35 +312,20 @@ export function BenchmarkDemo() {
                   className="input"
                   disabled={isRunning}
                 >
-                  <optgroup label="🚀 バッチ最適化テスト">
+                  <optgroup label="🎲 GNRNG 乱数生成">
                     <option value="gnrng-batch">GNRNG: 個別 vs バッチ</option>
                     <option value="gnrng-range-batch">
                       GNRNG範囲: 個別 vs バッチ
                     </option>
-                    <option value="create-id-batch">
-                      ID生成: 個別 vs バッチ
-                    </option>
+                  </optgroup>
+                  <optgroup label="🆔 ID生成">
                     <option value="create-id-seeded-batch">
                       シードID: 個別 vs バッチ
                     </option>
-                    <option value="deterministic-id-batch">
-                      決定的ID: 個別 vs バッチ
-                    </option>
-                    <option value="get-name-batch">
-                      名前生成: 個別 vs バッチ
-                    </option>
                   </optgroup>
-                  <optgroup label="🧠 スマート最適化">
-                    <option value="smart-optimization">
-                      スマート自動最適化
-                    </option>
-                  </optgroup>
-                  <optgroup label="🌍 実用例">
-                    <option value="real-world-session">
-                      実用: ユーザーセッション
-                    </option>
-                    <option value="real-world-game">
-                      実用: ゲームイベント
+                  <optgroup label="🔄 混合処理">
+                    <option value="mixed-operations">
+                      混合: 乱数 + ID生成
                     </option>
                   </optgroup>
                 </select>
@@ -475,7 +364,7 @@ export function BenchmarkDemo() {
                   className="input"
                   disabled={isRunning}
                 >
-                  {PRESET_BATCH_SIZES.map(({ value, label }) => (
+                  {PRESET_SIZES.map(({ value, label }) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
@@ -484,39 +373,6 @@ export function BenchmarkDemo() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                {showAdvanced ? '▼' : '▶'} 詳細設定
-              </button>
-            </div>
-
-            {showAdvanced && (
-              <div className="p-3 border border-blue-300 rounded bg-blue-25">
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="custom-batch-input"
-                    className="text-sm font-medium text-blue-800"
-                  >
-                    カスタムバッチサイズ:
-                  </label>
-                  <input
-                    id="custom-batch-input"
-                    type="number"
-                    value={batchSize}
-                    onChange={(e) => setBatchSize(e.target.value)}
-                    className="w-32 input"
-                    min="10"
-                    max="100000"
-                    disabled={isRunning}
-                  />
-                </div>
-              </div>
-            )}
-
             <div className="flex gap-3">
               <button
                 type="button"
@@ -524,16 +380,16 @@ export function BenchmarkDemo() {
                 disabled={isRunning}
                 className="btn-primary disabled:opacity-50"
               >
-                {isRunning ? '⏳ 実行中...' : '🚀 バッチベンチマーク実行'}
+                {isRunning ? '⏳ 実行中...' : '🚀 ベンチマーク実行'}
               </button>
 
               <button
                 type="button"
-                onClick={runComprehensiveBenchmark}
+                onClick={runAllBenchmarks}
                 disabled={isRunning}
                 className="btn-secondary disabled:opacity-50"
               >
-                {isRunning ? '⏳ 実行中...' : '📊 包括テスト実行'}
+                {isRunning ? '⏳ 実行中...' : '📊 全テスト実行'}
               </button>
             </div>
           </div>
@@ -556,7 +412,7 @@ export function BenchmarkDemo() {
         {results.length > 0 && (
           <div>
             <h4 className="mb-4 font-semibold text-gray-700">
-              🚀 バッチAPI最適化結果
+              🚀 パフォーマンス結果
             </h4>
             <div className="space-y-4">
               {results.map((result) => (
@@ -697,7 +553,7 @@ export function BenchmarkDemo() {
         {results.length >= 3 && (
           <div className="p-4 border border-green-200 rounded-lg bg-green-50">
             <h5 className="mb-3 text-sm font-medium text-green-900">
-              📊 バッチAPI最適化サマリー
+              📊 パフォーマンスサマリー
             </h5>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="text-center">
@@ -731,26 +587,23 @@ export function BenchmarkDemo() {
         {/* Info Section */}
         <div className="p-4 border rounded-lg bg-gray-50">
           <h5 className="mb-2 text-sm font-medium text-gray-900">
-            ℹ️ バッチAPI最適化について
+            ℹ️ GNRNG-IDについて
           </h5>
           <div className="space-y-2 text-sm text-gray-700">
             <p>
+              • <strong>🎲 GNRNG:</strong>{' '}
+              シードベースの決定的疑似乱数生成器（WASM実装）
+            </p>
+            <p>
+              • <strong>🆔 ID生成:</strong> 高性能なユニークID生成（WASM +
+              TypeScript）
+            </p>
+            <p>
               • <strong>🚀 バッチ処理:</strong>{' '}
-              複数の処理を一括実行してFFI境界コストを削減
+              FFI境界コストを削減する一括処理API
             </p>
             <p>
-              • <strong>⚡ FFI最適化:</strong>{' '}
-              JavaScript↔WASM間の通信回数を最小化
-            </p>
-            <p>
-              • <strong>📈 期待効果:</strong> 従来比10-50倍の高速化を実現
-            </p>
-            <p>
-              • <strong>🎯 適用場面:</strong>{' '}
-              大量データ処理、バッチ処理、リアルタイム処理
-            </p>
-            <p>
-              • <strong>⚠️ 注意:</strong> バッチサイズが小さすぎると効果が限定的
+              • <strong>⚡ 期待効果:</strong> TypeScript比5-20倍の高速化を実現
             </p>
           </div>
         </div>
@@ -758,13 +611,13 @@ export function BenchmarkDemo() {
         {/* Quick Tips */}
         <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50">
           <h5 className="mb-2 text-sm font-medium text-yellow-900">
-            💡 最適化のコツ
+            💡 使用のコツ
           </h5>
           <div className="grid gap-2 text-sm text-yellow-800 sm:grid-cols-2">
-            <div>• バッチサイズ100以上で効果的</div>
-            <div>• 1000-10000が最適な範囲</div>
-            <div>• 反復処理はバッチAPIを活用</div>
-            <div>• スマートAPIで自動最適化</div>
+            <div>• 大量処理はバッチAPIを活用</div>
+            <div>• シード値で決定的な生成が可能</div>
+            <div>• メモリ管理のためfree()を忘れずに</div>
+            <div>• TypeScriptとの完全互換性</div>
           </div>
         </div>
       </div>

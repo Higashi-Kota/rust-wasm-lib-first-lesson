@@ -31,8 +31,7 @@ const OPTIMIZATION_THRESHOLDS = {
 } as const
 
 // TypeScript ID generation constants (from @internal/utils)
-const AVAILABLE_ALPHABET =
-  '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+const AVAILABLE_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 /**
  * WASMモジュールを初期化する
@@ -59,9 +58,7 @@ export async function initWasm(): Promise<void> {
  */
 function ensureWasmInitialized(): void {
   if (!wasmInitialized) {
-    throw new Error(
-      'WASM module not initialized. Call initWasm() first or use the async variants.'
-    )
+    throw new Error('WASM module not initialized. Call initWasm() first or use the async variants.')
   }
 }
 
@@ -168,21 +165,13 @@ export class Gnrng {
   /**
    * 大量範囲バッチを分割処理
    */
-  private nextRangeBatchChunked(
-    min: number,
-    max: number,
-    count: number
-  ): number[] {
+  private nextRangeBatchChunked(min: number, max: number, count: number): number[] {
     const result: number[] = []
     const chunkSize = OPTIMIZATION_THRESHOLDS.BATCH_MAX_SIZE
 
     for (let i = 0; i < count; i += chunkSize) {
       const currentChunkSize = Math.min(chunkSize, count - i)
-      const chunk = this.wasmInstance.next_range_batch(
-        min,
-        max,
-        currentChunkSize
-      )
+      const chunk = this.wasmInstance.next_range_batch(min, max, currentChunkSize)
       result.push(...chunk)
     }
 
@@ -213,11 +202,7 @@ export function gnrng(seed: string): Gnrng {
  * @param type ID のタイプ（デフォルト: Default）
  * @returns 生成された ID
  */
-export function createIdBySeed(
-  seed: string,
-  size = 7,
-  type: IdType = IdType.Default
-): string {
+export function createIdBySeed(seed: string, size = 7, type: IdType = IdType.Default): string {
   ensureWasmInitialized()
 
   const rng = new Gnrng(seed)
