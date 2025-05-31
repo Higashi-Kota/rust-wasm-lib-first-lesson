@@ -6,6 +6,9 @@ export default defineConfig({
     // テスト環境をNodeに設定（WASMテスト用）
     environment: 'node',
 
+    // セットアップファイルを追加
+    setupFiles: ['./src/test-setup.ts'],
+
     // グローバルなテスト関数を有効化（describe, it, expect など）
     globals: true,
 
