@@ -79,7 +79,7 @@ export function BenchmarkDemo() {
     try {
       const iterationCount = Number.parseInt(iterations)
       if (
-        isNaN(iterationCount) ||
+        Number.isNaN(iterationCount) ||
         iterationCount < 100 ||
         iterationCount > 100000
       ) {

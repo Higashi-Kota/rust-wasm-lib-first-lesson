@@ -1,13 +1,4 @@
 {
-  "name": "rust-wasm-lib-first-lesson",
-  "private": true,
-  "version": "0.1.0",
-  "description": "@nap5/gnrng-id - Rust WASM × TypeScript ID Generator Library",
-  "workspaces": [
-    "packages/*", 
-    "packages/crates/*/pkg"
-  ],
-  "type": "module",
   "scripts": {
     "clean:modules": "find packages -type d -name node_modules -prune -exec rm -rf {} +",
     "clean:build": "find packages -name '*.tsbuildinfo' -delete && find packages -type d -name dist -exec rm -rf {} +",
@@ -28,7 +19,6 @@
     
     "build": "make build",
     "build:utils": "pnpm --filter @internal/utils build",
-    "prepare": "make prepare",
     
     "preview": "pnpm --filter app preview",
     "format": "make format",
@@ -54,8 +44,11 @@
     "benchmark": "make benchmark",
     "benchmark:lib": "pnpm --filter @nap5/gnrng-id benchmark",
     
-    "install:all": "pnpm run build:wasm && pnpm install",
-    "setup": "pnpm run install:all",
+    "setup": "pnpm run setup:full",
+    "setup:full": "pnpm run clean:wasm && pnpm run build:wasm && pnpm install --shamefully-hoist && pnpm run install:check",
+    "setup:quick": "pnpm run build:wasm && pnpm install",
+    "install:all": "pnpm run setup:quick",
+    "install:check": "pnpm list --depth=1",
     
     "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings",
     
@@ -66,39 +59,5 @@
     "demo:dev": "pnpm run dev:all",
     "demo:build": "pnpm run build && pnpm --filter app build",
     "demo:preview": "pnpm --filter app preview"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "1.9.4",
-    "concurrently": "^8.2.2"
-  },
-  "engines": {
-    "node": ">=22.11.0",
-    "pnpm": ">=10.11.0"
-  },
-  "volta": {
-    "node": "22.11.0",
-    "pnpm": "10.11.0"
-  },
-  "keywords": [
-    "rust",
-    "webassembly",
-    "wasm",
-    "gnrng",
-    "random",
-    "id-generator",
-    "typescript",
-    "library",
-    "deterministic",
-    "performance"
-  ],
-  "author": "Higashi Kota <higashi.kota@gri.jp>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson/issues"
-  },
-  "homepage": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson#readme"
+  }
 }

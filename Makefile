@@ -13,11 +13,26 @@ build-wasm-prod:
 	wasm-pack build packages/crates/gnrng-id --target web --scope $(SCOPE) --release
 	@echo "GNRNG-ID WASM package built successfully!"
 
-# 依存関係のインストール
+# 依存関係のインストール（改善版）
 install:
 	@echo "Installing dependencies..."
-	pnpm install
+	pnpm install --shamefully-hoist
 	@echo "Dependencies installed successfully!"
+
+# 完全セットアップ（推奨）
+setup:
+	@echo "Setting up entire project..."
+	make clean
+	make build-wasm-dev
+	pnpm install --shamefully-hoist
+	@echo "Project setup completed successfully!"
+
+# クイックセットアップ
+setup-quick:
+	@echo "Quick setup..."
+	make build-wasm-dev
+	pnpm install
+	@echo "Quick setup completed!"
 
 # 開発サーバーの起動（要concurrently）
 dev:
@@ -121,14 +136,6 @@ clean-all: clean
 	rm -rf packages/*/*/node_modules
 	@echo "Deep cleanup completed!"
 
-# プロダクションビルド準備
-prepare:
-	@echo "Preparing for production build..."
-	make clean
-	make install
-	make build
-	@echo "Production build preparation completed!"
-
 # ライブラリの公開（npm）
 publish-npm:
 	@echo "Publishing to npm..."
@@ -150,6 +157,8 @@ publish-all: publish-npm publish-jsr
 # ヘルプ
 help:
 	@echo "Available commands:"
+	@echo "  setup             - Complete project setup (recommended)"
+	@echo "  setup-quick       - Quick setup without cleanup"
 	@echo "  build-wasm-dev    - Build WASM package for development"
 	@echo "  build-wasm-prod   - Build WASM package for production"
 	@echo "  build-lib         - Build TypeScript library"
@@ -167,10 +176,9 @@ help:
 	@echo "  format            - Format all code"
 	@echo "  clean             - Clean build artifacts"
 	@echo "  clean-all         - Deep clean everything"
-	@echo "  prepare           - Prepare for production build"
 	@echo "  publish-npm       - Publish library to npm"
 	@echo "  publish-jsr       - Publish library to JSR"
 	@echo "  publish-all       - Publish to all registries"
 	@echo "  help              - Show this help message"
 
-.PHONY: build-wasm-dev build-wasm-prod build-lib build dev dev-all watch-wasm watch-lib test test-ts test-rust benchmark typecheck check format clean clean-all prepare publish-npm publish-jsr publish-all help install
+.PHONY: setup setup-quick build-wasm-dev build-wasm-prod build-lib build dev dev-all watch-wasm watch-lib test test-ts test-rust benchmark typecheck check format clean clean-all publish-npm publish-jsr publish-all help install

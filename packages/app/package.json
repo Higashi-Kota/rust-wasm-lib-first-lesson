@@ -1,8 +1,6 @@
 {
   "dependencies": {
-    "@internal/wasm-math": "workspace:*",
-    "@internal/wasm-text": "workspace:*",
-    "@internal/wasm-utils": "workspace:*",
+    "@nap5/gnrng-id": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
