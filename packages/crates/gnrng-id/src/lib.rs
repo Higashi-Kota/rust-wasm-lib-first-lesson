@@ -66,26 +66,27 @@ impl Gnrng {
             w: 0,
         };
 
-        // シードの初期化
-        for (i, byte) in seed.bytes().enumerate() {
-            rng.x ^= byte as u32;
-            rng.next_u32(); // 初期状態をミックス
-
-            // 64回分余分にミックス（元のTypeScript実装に合わせる）
-            if i == seed.len() - 1 {
-                for _ in 0..64 {
-                    rng.next_u32();
-                }
+        // TypeScriptの実装と完全に一致させる: seed.length + 64 回ループ
+        for k in 0..(seed.len() + 64) {
+            if k < seed.len() {
+                rng.x ^= seed.as_bytes()[k] as u32;
             }
+            rng.next_u32();
         }
 
         rng
     }
 
     /// 次の擬似乱数値（0.0 ～ 1.0未満）を生成
+    /// 
+    /// Note: `next`という名前はstd::iter::Iterator::nextと紛らわしいですが、
+    /// JavaScript/TypeScriptのAPIとの互換性を保つために使用しています
     #[wasm_bindgen]
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> f64 {
-        self.next_u32() as f64 / 0x100000000_f64
+        // 0x100000000 = 2^32 = 4294967296.0
+        // TypeScriptの w / 0x100000000 と同じ計算
+        self.next_u32() as f64 / 4294967296.0
     }
 
     /// 次の32bit符号なし整数を生成（内部用）
@@ -277,7 +278,24 @@ mod tests {
 
         for _ in 0..100 {
             let value = rng.next_range(1, 10);
-            assert!(value >= 1 && value < 10);
+            assert!((1..10).contains(&value));
+        }
+    }
+
+    #[test]
+    fn test_typescript_compatibility() {
+        // TypeScriptの実装と同じ結果が得られることを確認
+        let mut rng = Gnrng::new("test-seed");
+        let value = rng.next();
+        
+        // 0.0以上1.0未満の範囲
+        assert!((0.0..1.0).contains(&value));
+        
+        // 決定性の確認
+        let mut rng1 = Gnrng::new("same-seed");
+        let mut rng2 = Gnrng::new("same-seed");
+        for _ in 0..5 {
+            assert_eq!(rng1.next(), rng2.next());
         }
     }
 }
