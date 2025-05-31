@@ -68,35 +68,6 @@ export function Footer() {
               </div>
             </div>
           </div>
-
-          {/* パフォーマンス & 特徴 */}
-          <div>
-            <h4 className="mb-4 text-lg font-semibold text-white">
-              ⚡ パフォーマンス
-            </h4>
-            <div className="space-y-2 text-sm text-gray-400">
-              <div className="flex items-center">
-                <span className="mr-2 text-green-400">🚀</span>
-                <span>5.6x faster GNRNG generation</span>
-              </div>
-              <div className="flex items-center">
-                <span className="mr-2 text-blue-400">⚡</span>
-                <span>4x faster ID creation</span>
-              </div>
-              <div className="flex items-center">
-                <span className="mr-2 text-purple-400">🔒</span>
-                <span>100% deterministic results</span>
-              </div>
-              <div className="flex items-center">
-                <span className="mr-2 text-yellow-400">📦</span>
-                <span>Type-safe API</span>
-              </div>
-              <div className="flex items-center">
-                <span className="mr-2 text-pink-400">🌐</span>
-                <span>Universal (Node.js/Deno/Browser)</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* 下部セクション */}

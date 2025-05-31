@@ -59,69 +59,6 @@ function App() {
             </div>
           </div>
 
-          {/* 技術情報セクション */}
-          <section
-            className="card animate-fade-in"
-            style={{ animationDelay: '0.3s' }}
-          >
-            <h3 className="section-title">🚀 技術スタック</h3>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <h4 className="mb-2 font-semibold text-gray-900">
-                  🦀 Backend (WASM)
-                </h4>
-                <ul className="space-y-1 text-gray-600">
-                  <li>• Rust 1.86.0 + wasm-bindgen</li>
-                  <li>• wasm-pack (ビルドツール)</li>
-                  <li>• GNRNG疑似乱数生成器</li>
-                  <li>• 高性能ID生成アルゴリズム</li>
-                  <li>• メモリ効率的な実装</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="mb-2 font-semibold text-gray-900">⚛️ Frontend</h4>
-                <ul className="space-y-1 text-gray-600">
-                  <li>• React 18 + TypeScript</li>
-                  <li>• Vite (高速ビルドツール)</li>
-                  <li>• TailwindCSS (スタイリング)</li>
-                  <li>• Vitest (テストフレームワーク)</li>
-                  <li>• Biome (リンター・フォーマッター)</li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          {/* パフォーマンス情報セクション */}
-          <section
-            className="card animate-fade-in"
-            style={{ animationDelay: '0.4s' }}
-          >
-            <h3 className="section-title">⚡ パフォーマンス</h3>
-            <div className="grid gap-6 md:grid-cols-3">
-              <div className="p-4 border border-green-200 rounded-lg bg-green-50">
-                <div className="text-2xl font-bold text-green-800">5.6x</div>
-                <div className="text-sm text-green-600">GNRNG生成速度向上</div>
-                <div className="mt-1 text-xs text-gray-500">
-                  vs. TypeScript実装
-                </div>
-              </div>
-              <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
-                <div className="text-2xl font-bold text-blue-800">4x</div>
-                <div className="text-sm text-blue-600">ID生成速度向上</div>
-                <div className="mt-1 text-xs text-gray-500">
-                  vs. JavaScript実装
-                </div>
-              </div>
-              <div className="p-4 border border-purple-200 rounded-lg bg-purple-50">
-                <div className="text-2xl font-bold text-purple-800">100%</div>
-                <div className="text-sm text-purple-600">決定性保証</div>
-                <div className="mt-1 text-xs text-gray-500">
-                  同一シード・同一結果
-                </div>
-              </div>
-            </div>
-          </section>
-
           {/* 使用例セクション */}
           <section
             className="card animate-fade-in"
