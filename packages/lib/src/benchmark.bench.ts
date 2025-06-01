@@ -121,6 +121,7 @@ describe('🚀 GNRNG-ID Performance Benchmarks: WASM vs TypeScript', () => {
     bench('WASM: Mixed operations individual (1000 times)', () => {
       for (let i = 0; i < 1000; i++) {
         // ID生成
+        // @ts-expect-error ベンチマークのためOmit
         const _seededId = createIdBySeed(`seed-${i}`, 7, IdType.Project)
 
         // 乱数生成
@@ -133,6 +134,7 @@ describe('🚀 GNRNG-ID Performance Benchmarks: WASM vs TypeScript', () => {
 
     bench('🚀 WASM: Mixed operations batch (1000 times)', () => {
       // バッチID生成
+      // @ts-expect-error ベンチマークのためOmit
       const _seededIds = createIdsBySeed('batch-seed', 1000, 7, IdType.Project)
 
       // バッチ乱数生成
@@ -145,6 +147,7 @@ describe('🚀 GNRNG-ID Performance Benchmarks: WASM vs TypeScript', () => {
     bench('TypeScript: Mixed operations individual (1000 times)', () => {
       for (let i = 0; i < 1000; i++) {
         // ID生成
+        // @ts-expect-error ベンチマークのためOmit
         const _seededId = utilsCreateIdBySeed(`seed-${i}`, 7, 'project')
 
         // 乱数生成
@@ -296,6 +299,7 @@ describe('🚀 GNRNG-ID Performance Benchmarks: WASM vs TypeScript', () => {
 
     bench('Baseline: String concatenation (1K operations)', () => {
       for (let i = 0; i < 1000; i++) {
+        // @ts-expect-error ベンチマークのためOmit
         const _result = `prefix_${Math.random().toString(36).substr(2, 7)}`
       }
     })
@@ -315,7 +319,9 @@ describe('🚀 GNRNG-ID Performance Benchmarks: WASM vs TypeScript', () => {
 
       // 決定性の確認
       for (let i = 0; i < 100; i++) {
+        // @ts-expect-error ベンチマークのためOmit
         const _wasmValue = wasmRng.next()
+        // @ts-expect-error ベンチマークのためOmit
         const _utilsValue = utilsRng()
         // 同じアルゴリズムなので同じ値になることを期待
       }
@@ -325,7 +331,9 @@ describe('🚀 GNRNG-ID Performance Benchmarks: WASM vs TypeScript', () => {
 
     bench('Consistency: WASM vs TypeScript ID generation', () => {
       for (let i = 0; i < 100; i++) {
+        // @ts-expect-error ベンチマークのためOmit
         const _wasmId = createIdBySeed(`consistency-${i}`, 7, IdType.Default)
+        // @ts-expect-error ベンチマークのためOmit
         const _utilsId = utilsCreateIdBySeed(`consistency-${i}`, 7, 'default')
         // 同じアルゴリズムなので同じIDになることを期待
       }

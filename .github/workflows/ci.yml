@@ -142,7 +142,7 @@ jobs:
         run: pnpm --filter @internal/utils build
 
       - name: Build library package
-        run: pnpm --filter @nap5/gnrng-id build
+        run: pnpm --filter @nap5/gnrng-id run build:ci
 
       - name: TypeScript type check
         run: pnpm run typecheck

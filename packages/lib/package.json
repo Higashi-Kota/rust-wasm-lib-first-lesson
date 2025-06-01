@@ -28,11 +28,7 @@
     },
     "./package.json": "./package.json"
   },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
+  "files": ["dist", "README.md", "LICENSE"],
   "funding": {
     "type": "individual",
     "url": "https://github.com/sponsors/Higashi-Kota"
@@ -72,6 +68,7 @@
   "scripts": {
     "benchmark": "vitest bench --reporter=verbose src/benchmark.bench.ts",
     "build": "pnpm run build:wasm && pnpm run build:lib",
+    "build:ci": "pnpm run build:lib",
     "build:lib": "tsup",
     "build:wasm": "wasm-pack build ../crates/gnrng-id --target web --scope nap5 --release",
     "build:watch": "tsup --watch",
