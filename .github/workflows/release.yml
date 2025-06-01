@@ -149,15 +149,15 @@ jobs:
           # Rust tests
           cargo test --workspace --verbose --locked
 
-          # Build WASM
+          # Build WASM (一度だけ、リリース最適化付き)
           wasm-pack build packages/crates/gnrng-id --target web --scope nap5 --release
 
           # Install Node.js dependencies
           pnpm install --frozen-lockfile --shamefully-hoist
 
-          # Build packages
+          # Build packages (WASMは既にビルド済みなのでCI用ビルドを使用)
           pnpm --filter @internal/utils build
-          pnpm --filter @nap5/gnrng-id build
+          pnpm --filter @nap5/gnrng-id build:ci
 
           # TypeScript tests
           pnpm --filter @internal/utils test:run
@@ -219,22 +219,46 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: release-artifacts
+          path: release-temp/
 
       - name: 📦 Restore package structure
         run: |
-          # Restore WASM artifacts
+          # WASM artifacts を正しい場所に配置
           mkdir -p packages/crates/gnrng-id/pkg
-          if [ -d "packages/crates/gnrng-id/pkg" ]; then
-            cp -r packages/crates/gnrng-id/pkg/* packages/crates/gnrng-id/pkg/ 2>/dev/null || true
+          if [ -d "release-temp/packages/crates/gnrng-id/pkg" ]; then
+            cp -r release-temp/packages/crates/gnrng-id/pkg/* packages/crates/gnrng-id/pkg/
+            echo "✅ WASM artifacts restored"
+          else
+            echo "❌ WASM artifacts missing"
+            exit 1
           fi
 
-          # Restore lib artifacts
+          # lib artifacts を正しい場所に配置
           mkdir -p packages/lib/dist
-          if [ -d "packages/lib/dist" ]; then
-            cp -r packages/lib/dist/* packages/lib/dist/ 2>/dev/null || true
+          if [ -d "release-temp/packages/lib/dist" ]; then
+            cp -r release-temp/packages/lib/dist/* packages/lib/dist/
+            echo "✅ TypeScript build artifacts restored"
+          else
+            echo "❌ TypeScript build artifacts missing"
+            exit 1
           fi
-          cp packages/lib/package.json packages/lib/
-          cp packages/lib/jsr.json packages/lib/
+
+          # package.json と jsr.json を復元（バージョン更新済み）
+          if [ -f "release-temp/packages/lib/package.json" ]; then
+            cp release-temp/packages/lib/package.json packages/lib/package.json
+            echo "✅ Updated package.json restored"
+          else
+            echo "❌ Updated package.json missing"
+            exit 1
+          fi
+
+          if [ -f "release-temp/packages/lib/jsr.json" ]; then
+            cp release-temp/packages/lib/jsr.json packages/lib/jsr.json
+            echo "✅ Updated jsr.json restored"
+          else
+            echo "❌ Updated jsr.json missing"
+            exit 1
+          fi
 
       - name: 🔍 Verify package contents
         run: |
@@ -245,6 +269,16 @@ jobs:
           ls -la dist/
           echo "📋 Package.json version:"
           node -p "require('./package.json').version"
+
+          # 必要なファイルの確認
+          REQUIRED_FILES=("dist/index.js" "dist/index.cjs" "dist/index.d.ts" "package.json")
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Required file missing: $file"
+              exit 1
+            fi
+          done
+          echo "✅ All required files present"
 
       - name: 🚀 Publish to npm
         run: |
@@ -283,23 +317,33 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: release-artifacts
+          path: release-temp/
 
       - name: 📦 Restore package structure
         run: |
-          # Restore WASM artifacts (JSR用にソースコードが必要)
-          mkdir -p packages/crates/gnrng-id/pkg
-          if [ -d "packages/crates/gnrng-id/pkg" ]; then
-            cp -r packages/crates/gnrng-id/pkg/* packages/crates/gnrng-id/pkg/ 2>/dev/null || true
+          # JSR用にソースコードとjsr.jsonを復元
+          if [ -f "release-temp/packages/lib/jsr.json" ]; then
+            cp release-temp/packages/lib/jsr.json packages/lib/jsr.json
+            echo "✅ Updated jsr.json restored"
+          else
+            echo "❌ Updated jsr.json missing"
+            exit 1
           fi
 
-          # Restore lib artifacts  
-          cp packages/lib/jsr.json packages/lib/
+          # WASM artifacts も念のため復元（JSRで参照される可能性）
+          mkdir -p packages/crates/gnrng-id/pkg
+          if [ -d "release-temp/packages/crates/gnrng-id/pkg" ]; then
+            cp -r release-temp/packages/crates/gnrng-id/pkg/* packages/crates/gnrng-id/pkg/
+            echo "✅ WASM artifacts restored"
+          fi
 
       - name: 🔍 Verify JSR config
         run: |
           cd packages/lib
           echo "📋 JSR config:"
           cat jsr.json
+          echo "📋 JSR version:"
+          node -p "JSON.parse(require('fs').readFileSync('jsr.json', 'utf8')).version"
           echo "📋 Source files:"
           ls -la src/
           echo "📋 TypeScript source check:"

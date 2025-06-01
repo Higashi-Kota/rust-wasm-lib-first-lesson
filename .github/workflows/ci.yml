@@ -205,7 +205,7 @@ jobs:
       - name: Build packages
         run: |
           pnpm --filter @internal/utils build
-          pnpm --filter @nap5/gnrng-id build
+          pnpm --filter @nap5/gnrng-id build:ci
 
       - name: Package check (npm)
         run: |
