@@ -210,8 +210,12 @@ jobs:
       - name: Package check (npm)
         run: |
           cd packages/lib
+          echo "Current directory contents:"
+          ls -la
+          echo "Dist directory contents:"
+          ls -la dist/ || echo "No dist directory"
+          echo "Running npm pack --dry-run..."
           npm pack --dry-run
-          ls -la dist/
 
       - name: Package check (JSR)
         run: |
@@ -230,14 +234,6 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      # 一旦スキップ
-      # - name: Install cargo-audit
-      #   run: cargo install cargo-audit
-
-      # - name: Run security audit
-      #   run: |
-      #     cargo audit
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -250,10 +246,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --shamefully-hoist
-
-      # 一旦スキップ
-      # - name: Run npm audit
-      #   run: pnpm audit --audit-level moderate
 
       - name: Dependency check
         run: |

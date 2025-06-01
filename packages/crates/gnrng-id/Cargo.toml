@@ -1,5 +1,5 @@
 [package]
-name = "gnrng-id"
+name = "gnrng-id-wasm"
 version = "0.1.0"
 edition = "2021"
 authors = ["Higashi Kota <higashi.kota@gri.jp>"]
