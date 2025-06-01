@@ -28,3 +28,54 @@ WASMパッケージ（低レベル）とライブラリパッケージ（高レ�
 ✅ CI/CDパイプラインの安定化  
 
 この修正により、WASMコアはnpmで、TypeScript APIはnpm+JSRの両方で提供され、それぞれのエコシステムに最適な形で配布できます。
+
+## WASMライブラリとJSRの構造的な問題
+
+### 1. **WASM の生成物の性質**
+```bash
+# wasm-pack の出力
+packages/crates/gnrng-id/pkg/
+├── gnrng_id_wasm.js        # 生成されたJSバインディング
+├── gnrng_id_wasm.d.ts      # 生成されたTS型定義
+├── gnrng_id_wasm_bg.wasm   # WASMバイナリ（バイナリファイル）
+└── package.json            # 生成されたパッケージ設定
+```
+
+これらは全て**生成されたファイル**で、TypeScriptソースコードではありません。
+
+### 2. **JSRの前提条件**
+```json
+// JSRが期待する構造
+{
+  "exports": {
+    ".": "./src/index.ts"  // ← TypeScriptソースが必要
+  }
+}
+```
+
+JSRは：
+- **TypeScriptソースコード**を直接ホスト
+- Denoが実行時にTS→JSトランスパイル
+- WASMバイナリの動的ロードは複雑
+
+## WASMをラップしたライブラリの場合
+
+### ✅ **技術的な現実**
+1. **WASM = バイナリ + 生成JS** → TypeScript-pure ではない
+2. **JSR = TypeScript-first** → WASMバイナリは想定外
+3. **依存関係の連鎖** → WASMに依存する時点でTS-onlyにならない
+
+### ✅ **実用的な判断**
+- **npm専用配布**が最も安定
+- 多くの成功しているWASMライブラリが採用
+- メンテナンス負荷を削減
+
+```bash
+# npm (推奨)
+npm install @nap5/gnrng-id
+
+# Deno (npm prefix使用)
+import { createId } from "npm:@nap5/gnrng-id"
+```
+
+**WASMライブラリはnpmエコシステムが最適**という結論は、技術的制約を考慮した非常に合理的な判断です。

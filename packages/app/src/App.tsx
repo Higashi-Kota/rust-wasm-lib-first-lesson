@@ -31,14 +31,6 @@ function App() {
                 📦 npm
               </a>
               <a
-                href="https://jsr.io/@nap5/gnrng-id"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white transition-colors bg-yellow-600 rounded-lg hover:bg-yellow-700"
-              >
-                🦕 JSR
-              </a>
-              <a
                 href="https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson"
                 target="_blank"
                 rel="noopener noreferrer"

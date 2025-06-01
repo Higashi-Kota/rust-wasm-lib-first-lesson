@@ -59,7 +59,6 @@
     "lint:rust": "cargo clippy --workspace --all-targets -- -D warnings",
     
     "publish:npm": "make publish-npm",
-    "publish:jsr": "make publish-jsr", 
     "publish:all": "make publish-all",
     
     "demo:dev": "pnpm run dev:all",

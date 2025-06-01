@@ -20,11 +20,6 @@ on:
         required: false
         type: boolean
         default: true
-      publish_jsr:
-        description: "Publish to JSR"
-        required: false
-        type: boolean
-        default: true
 
 concurrency:
   group: release-${{ github.ref }}
@@ -45,7 +40,6 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       is_prerelease: ${{ steps.version.outputs.is_prerelease }}
       should_publish_npm: ${{ steps.flags.outputs.should_publish_npm }}
-      should_publish_jsr: ${{ steps.flags.outputs.should_publish_jsr }}
 
     steps:
       - name: 📥 Checkout
@@ -75,10 +69,8 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should_publish_npm=${{ github.event.inputs.publish_npm }}" >> $GITHUB_OUTPUT
-            echo "should_publish_jsr=${{ github.event.inputs.publish_jsr }}" >> $GITHUB_OUTPUT
           else
             echo "should_publish_npm=true" >> $GITHUB_OUTPUT
-            echo "should_publish_jsr=true" >> $GITHUB_OUTPUT
           fi
 
       - name: 📋 Validate version format
@@ -160,10 +152,6 @@ jobs:
           mkdir -p build-artifacts/lib-dist  
           cp -r packages/lib/dist/* build-artifacts/lib-dist/
 
-          # Source files for JSR (packages/lib/src/)
-          mkdir -p build-artifacts/lib-src
-          cp -r packages/lib/src/* build-artifacts/lib-src/
-
           # WASM package config files
           cp packages/crates/gnrng-id/package.json build-artifacts/wasm-package.json
           cp packages/crates/gnrng-id/README.md build-artifacts/wasm-README.md
@@ -171,7 +159,6 @@ jobs:
 
           # Library package config files
           cp packages/lib/package.json build-artifacts/lib-package.json
-          cp packages/lib/jsr.json build-artifacts/lib-jsr.json
           cp packages/lib/README.md build-artifacts/lib-README.md
           cp packages/lib/LICENSE build-artifacts/lib-LICENSE
 
@@ -276,24 +263,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-    # Publish WASM package to JSR (1st stage) - SKIP for WASM
-  publish-wasm-jsr:
-    name: 🦕 Publish WASM to JSR (SKIPPED)
-    runs-on: ubuntu-latest
-    needs: [validate, build]
-    if: false # WASMパッケージはJSRをスキップ
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: ℹ️ Skip WASM JSR Publishing
-        run: |
-          echo "⏭️ Skipping WASM package JSR publishing"
-          echo "WASM packages are not ideal for JSR (TypeScript-first registry)"
-          echo "WASM core will be published to npm only"
-
   # Publish library package to npm (2nd stage)
   publish-lib-npm:
     name: 📦 Publish Library to npm
@@ -387,105 +356,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  # Publish library package to JSR (2nd stage)
-  publish-lib-jsr:
-    name: 🦕 Publish Library to JSR
-    runs-on: ubuntu-latest
-    needs: [validate, build] # publish-wasm-jsrの依存を削除
-    if: needs.validate.outputs.should_publish_jsr == 'true'
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: 📥 Checkout (for structure)
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: 📥 Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: build-artifacts/
-
-      - name: 📦 Restore library package structure for JSR
-        run: |
-          # lib ディレクトリ構造を再構築（JSRはソースが必要）
-          mkdir -p packages/lib/src
-
-          # Build artifacts を正しい場所に配置
-          cp -r build-artifacts/lib-src/* packages/lib/src/
-          cp build-artifacts/lib-jsr.json packages/lib/jsr.json
-          cp build-artifacts/lib-README.md packages/lib/README.md
-          cp build-artifacts/lib-LICENSE packages/lib/LICENSE
-
-          # Verification
-          echo "📋 Restored library package structure for JSR:"
-          ls -la packages/lib/
-          ls -la packages/lib/src/
-
-      - name: 📦 Update library JSR version and dependencies
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          cd packages/lib
-
-          echo "📋 Original library jsr.json:"
-          cat jsr.json | jq '.'
-
-          # Update JSR version using jq
-          echo "Updating library jsr.json version to $VERSION..."
-          jq --arg version "$VERSION" '.version = $version' jsr.json > jsr.json.tmp
-          mv jsr.json.tmp jsr.json
-
-          # Update WASM dependency version in imports (npmから取得)
-          echo "Updating WASM dependency version to $VERSION..."
-          jq --arg version "$VERSION" '.imports."@nap5/gnrng-id-wasm" = ("npm:@nap5/gnrng-id-wasm@^" + $version)' jsr.json > jsr.json.tmp
-          mv jsr.json.tmp jsr.json
-
-          # Remove unstable field if it exists (JSR workspace issue)
-          echo "Cleaning library JSR config..."
-          jq 'del(.unstable)' jsr.json > jsr.json.tmp
-          mv jsr.json.tmp jsr.json
-
-          # Set minimal permissions for JSR
-          jq '.permissions = {"env": false, "ffi": true, "net": false, "read": false, "run": false, "write": false}' jsr.json > jsr.json.tmp
-          mv jsr.json.tmp jsr.json
-
-          # Verify the final jsr.json
-          echo "📋 Final library jsr.json:"
-          cat jsr.json | jq '.'
-
-          echo "✅ Updated library jsr.json version:"
-          jq -r '.version' jsr.json
-
-      - name: 🔍 Verify library JSR config
-        run: |
-          cd packages/lib
-          echo "📋 Library JSR config:"
-          cat jsr.json
-          echo "📋 Library JSR version:"
-          node -p "JSON.parse(require('fs').readFileSync('jsr.json', 'utf8')).version"
-
-          # JSR publish のドライラン（--allow-dirtyフラグ追加）
-          npx jsr publish --dry-run --allow-dirty
-
-      - name: 🚀 Publish library to JSR (OIDC)
-        run: |
-          cd packages/lib
-          # CI環境では一時的な変更があるため--allow-dirtyフラグを使用
-          npx jsr publish --allow-dirty
-          echo "✅ Published library to JSR using OIDC authentication"
-
   # GitHub Release
   github-release:
     name: 📝 Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [validate, build, publish-lib-npm, publish-lib-jsr]
+    needs: [validate, build, publish-lib-npm]
     if: always() && needs.build.result == 'success'
     permissions:
       contents: write
@@ -525,8 +400,8 @@ jobs:
           echo "- **WASM Core**: \`npm install @nap5/gnrng-id-wasm@$VERSION\`" >> changelog.md
           echo "" >> changelog.md
           echo "### JSR (Deno)" >> changelog.md
-          echo "- **Library**: \`deno add @nap5/gnrng-id@$VERSION\`" >> changelog.md
-          echo "- **WASM Core**: \`deno add @nap5/gnrng-id-wasm@$VERSION\`" >> changelog.md
+          echo "- **Library**: \`deno add npm:@nap5/gnrng-id@$VERSION\`" >> changelog.md
+          echo "- **WASM Core**: \`deno add npm:@nap5/gnrng-id-wasm@$VERSION\`" >> changelog.md
 
       - name: 📝 Create Release
         uses: softprops/action-gh-release@v2
@@ -595,13 +470,10 @@ jobs:
         validate,
         build,
         publish-wasm-npm,
-        publish-wasm-jsr,
         publish-lib-npm,
-        publish-lib-jsr,
         github-release,
         docker-release,
       ]
-
     steps:
       - name: 📊 Summary
         run: |
@@ -613,56 +485,21 @@ jobs:
           echo "| Package | Target | Status | Link |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|--------|--------|------|" >> $GITHUB_STEP_SUMMARY
 
-          # WASM Package Status
+          # npm のみの状態を表示
           if [ "${{ needs.publish-wasm-npm.result }}" = "success" ]; then
             echo "| @nap5/gnrng-id-wasm | npm | ✅ Published | [View](https://www.npmjs.com/package/@nap5/gnrng-id-wasm) |" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ needs.validate.outputs.should_publish_npm }}" = "true" ]; then
+          else
             echo "| @nap5/gnrng-id-wasm | npm | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| @nap5/gnrng-id-wasm | npm | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          if [ "${{ needs.publish-wasm-jsr.result }}" = "success" ]; then
-            echo "| @nap5/gnrng-id-wasm | JSR | ✅ Published | [View](https://jsr.io/@nap5/gnrng-id-wasm) |" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ needs.validate.outputs.should_publish_jsr }}" = "true" ]; then
-            echo "| @nap5/gnrng-id-wasm | JSR | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| @nap5/gnrng-id-wasm | JSR | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Library Package Status
           if [ "${{ needs.publish-lib-npm.result }}" = "success" ]; then
             echo "| @nap5/gnrng-id | npm | ✅ Published | [View](https://www.npmjs.com/package/@nap5/gnrng-id) |" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ needs.validate.outputs.should_publish_npm }}" = "true" ]; then
+          else
             echo "| @nap5/gnrng-id | npm | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| @nap5/gnrng-id | npm | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [ "${{ needs.publish-lib-jsr.result }}" = "success" ]; then
-            echo "| @nap5/gnrng-id | JSR | ✅ Published | [View](https://jsr.io/@nap5/gnrng-id) |" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ needs.validate.outputs.should_publish_jsr }}" = "true" ]; then
-            echo "| @nap5/gnrng-id | JSR | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| @nap5/gnrng-id | JSR | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Other Services Status
-          if [ "${{ needs.github-release.result }}" = "success" ]; then
-            echo "| GitHub Release | GitHub | ✅ Created | [View](https://github.com/${{ github.repository }}/releases/tag/v$VERSION) |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| GitHub Release | GitHub | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [ "${{ needs.docker-release.result }}" = "success" ]; then
-            echo "| Docker Image | GHCR | ✅ Published | [View](https://ghcr.io/${{ github.repository }}) |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Docker Image | GHCR | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📋 Release Details" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: v$VERSION" >> $GITHUB_STEP_SUMMARY
           echo "- **Pre-release**: ${{ needs.validate.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Published to npm**: ${{ needs.validate.outputs.should_publish_npm }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Published to JSR**: ${{ needs.validate.outputs.should_publish_jsr }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Distribution**: npm only (optimized for WASM)" >> $GITHUB_STEP_SUMMARY

@@ -1,7 +1,6 @@
 # @nap5/gnrng-id-wasm
 
 [![npm version](https://badge.fury.io/js/@nap5%2Fgnrng-id-wasm.svg)](https://badge.fury.io/js/@nap5%2Fgnrng-id-wasm)
-[![JSR](https://jsr.io/badges/@nap5/gnrng-id-wasm)](https://jsr.io/@nap5/gnrng-id-wasm)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **WebAssembly bindings for GNRNG (Good Night Random Number Generator)** - Core Rust implementation.
@@ -28,7 +27,7 @@ npm install @nap5/gnrng-id-wasm
 ### JSR (for Deno)
 
 ```bash
-deno add @nap5/gnrng-id-wasm
+deno add npm:@nap5/gnrng-id-wasm
 ```
 
 ## 📖 Usage

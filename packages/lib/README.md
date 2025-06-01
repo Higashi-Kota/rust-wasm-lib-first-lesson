@@ -1,7 +1,6 @@
 # @nap5/gnrng-id
 
 [![npm version](https://badge.fury.io/js/@nap5%2Fgnrng-id.svg)](https://badge.fury.io/js/@nap5%2Fgnrng-id)
-[![JSR](https://jsr.io/badges/@nap5/gnrng-id)](https://jsr.io/@nap5/gnrng-id)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **GNRNG (Good Night Random Number Generator)** with ID generation utilities powered by **WebAssembly** and **Rust**.
@@ -30,7 +29,7 @@ npm install @nap5/gnrng-id
 ### JSR (for Deno)
 
 ```bash
-deno add @nap5/gnrng-id
+deno add npm:@nap5/gnrng-id
 ```
 
 ### Browser (CDN)
@@ -229,7 +228,7 @@ app.post('/api/users/batch', (req, res) => {
 
 ```typescript
 import { serve } from 'https://deno.land/std/http/server.ts'
-import { initWasm, Gnrng } from 'jsr:@nap5/gnrng-id'
+import { initWasm, Gnrng } from 'npm:@nap5/gnrng-id'
 
 await initWasm()
 
@@ -262,7 +261,6 @@ serve((req) => {
 - ✅ **ESM** (import/export)
 - ✅ **CommonJS** (require) 
 - ✅ **TypeScript**
-- ✅ **JSR** (Deno registry)
 
 ## 🛠️ Development
 

@@ -217,10 +217,6 @@ jobs:
           echo "Running npm pack --dry-run..."
           npm pack --dry-run
 
-      - name: Package check (JSR)
-        run: |
-          npx jsr publish --dry-run --config packages/lib/jsr.json
-
   security:
     name: Security Audit
     runs-on: ubuntu-latest

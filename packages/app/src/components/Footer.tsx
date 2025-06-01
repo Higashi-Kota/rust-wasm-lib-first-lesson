@@ -34,7 +34,7 @@ export function Footer() {
               <div>
                 <div className="mb-1 text-gray-300">JSR (Deno):</div>
                 <code className="block p-2 text-xs text-green-400 bg-black rounded">
-                  deno add @nap5/gnrng-id
+                  deno add npm:@nap5/gnrng-id
                 </code>
               </div>
             </div>
@@ -76,7 +76,7 @@ export function Footer() {
             {/* 著作権情報 */}
             <div className="text-center sm:text-left">
               <div className="text-sm text-gray-400">
-                © 2024{' '}
+                © {new Date().getFullYear()}{' '}
                 <span className="font-medium text-white">@nap5/gnrng-id</span>
               </div>
               <div className="text-xs text-gray-500">
@@ -110,14 +110,6 @@ export function Footer() {
                   rel="noopener noreferrer"
                 >
                   npm Package
-                </a>
-                <a
-                  href="https://jsr.io/@nap5/gnrng-id"
-                  className="text-sm text-gray-400 transition-colors hover:text-white"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  JSR Package
                 </a>
                 <a
                   href="https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson/blob/main/LICENSE"

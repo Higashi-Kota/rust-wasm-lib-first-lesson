@@ -49,16 +49,6 @@ export function Header() {
                 <span className="hidden sm:inline">npm</span>
               </a>
               <a
-                href="https://jsr.io/@nap5/gnrng-id"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-white transition-colors bg-yellow-600 rounded-lg hover:bg-yellow-700"
-                title="View on JSR"
-              >
-                <span className="mr-1">🦕</span>
-                <span className="hidden sm:inline">JSR</span>
-              </a>
-              <a
                 href="https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson"
                 target="_blank"
                 rel="noopener noreferrer"

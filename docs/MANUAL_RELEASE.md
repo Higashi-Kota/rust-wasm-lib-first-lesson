@@ -54,7 +54,6 @@ pnpm run build
 Version: 1.0.0
 Mark as pre-release: false (チェックなし)
 Publish to npm: true (チェック)
-Publish to JSR: true (チェック)
 ```
 
 #### 🧪 ベータ版リリースの場合
@@ -62,7 +61,6 @@ Publish to JSR: true (チェック)
 Version: 1.1.0-beta.1
 Mark as pre-release: true (チェック)
 Publish to npm: true (チェック)
-Publish to JSR: true (チェック)
 ```
 
 #### 🔒 テスト実行の場合（公開なし）
@@ -70,7 +68,6 @@ Publish to JSR: true (チェック)
 Version: 1.0.0-test
 Mark as pre-release: true (チェック)
 Publish to npm: false (チェックなし)
-Publish to JSR: false (チェックなし)
 ```
 
 ### 4. 実行中の監視
@@ -82,7 +79,6 @@ Publish to JSR: false (チェックなし)
 graph TD
     A[🔍 Validate Release] --> B[🏗️ Build & Test All]
     B --> C[📦 Publish to npm]
-    B --> D[🦕 Publish to JSR]
     B --> E[📝 Create GitHub Release]
     B --> F[🐳 Build & Push Docker Image]
     C --> G[✅ Release Summary]
@@ -95,7 +91,6 @@ graph TD
 - **🔍 Validate**: バージョン形式の検証
 - **🏗️ Build & Test**: 全テスト実行、WASMビルド、パッケージ更新
 - **📦 npm**: npmレジストリへの公開
-- **🦕 JSR**: JSRレジストリへの公開
 - **📝 GitHub Release**: GitHubリリースページの作成
 - **🐳 Docker**: Docker画像のビルド・公開
 
@@ -105,9 +100,6 @@ graph TD
 ```bash
 # npm での確認
 npm view @nap5/gnrng-id@1.0.0
-
-# JSR での確認
-# https://jsr.io/@nap5/gnrng-id
 
 # GitHub Release の確認
 # https://github.com/your-repo/releases/tag/v1.0.0

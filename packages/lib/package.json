@@ -80,7 +80,6 @@
     "lint": "biome lint src",
     "lint:fix": "biome lint src --fix --unsafe",
     "prepublishOnly": "pnpm run build && pnpm run test:run",
-    "publish:jsr": "jsr publish",
     "publish:npm": "npm publish --access public",
     "test": "vitest",
     "test:coverage": "vitest --coverage",

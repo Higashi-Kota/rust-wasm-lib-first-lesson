@@ -143,12 +143,6 @@ publish-wasm-npm:
 	cd packages/crates/gnrng-id && npm publish --access public
 	@echo "WASM package published to npm successfully!"
 
-# WASMパッケージの公開（JSR）
-publish-wasm-jsr:
-	@echo "Publishing WASM package to JSR..."
-	cd packages/crates/gnrng-id && npx jsr publish
-	@echo "WASM package published to JSR successfully!"
-
 # ライブラリの公開（npm）
 publish-lib-npm:
 	@echo "Publishing library to npm..."
@@ -156,23 +150,12 @@ publish-lib-npm:
 	pnpm --filter @nap5/gnrng-id publish:npm
 	@echo "Library published to npm successfully!"
 
-# ライブラリの公開（JSR）
-publish-lib-jsr:
-	@echo "Publishing library to JSR..."
-	pnpm --filter @nap5/gnrng-id build
-	pnpm --filter @nap5/gnrng-id publish:jsr
-	@echo "Library published to JSR successfully!"
-
 # 全パッケージの公開（npm） - 正しい順序で実行
 publish-npm: build-wasm-prod publish-wasm-npm publish-lib-npm
 	@echo "All packages published to npm successfully!"
 
-# 全パッケージの公開（JSR） - 正しい順序で実行
-publish-jsr: build-wasm-prod publish-wasm-jsr publish-lib-jsr
-	@echo "All packages published to JSR successfully!"
-
 # 両方のレジストリに公開
-publish-all: publish-npm publish-jsr
+publish-all: publish-npm
 	@echo "All packages published to all registries successfully!"
 
 # ヘルプ
@@ -198,12 +181,9 @@ help:
 	@echo "  clean             - Clean build artifacts"
 	@echo "  clean-all         - Deep clean everything"
 	@echo "  publish-wasm-npm  - Publish WASM package to npm"
-	@echo "  publish-wasm-jsr  - Publish WASM package to JSR"
 	@echo "  publish-lib-npm   - Publish library to npm"
-	@echo "  publish-lib-jsr   - Publish library to JSR"
 	@echo "  publish-npm       - Publish all packages to npm"
-	@echo "  publish-jsr       - Publish all packages to JSR"
 	@echo "  publish-all       - Publish to all registries"
 	@echo "  help              - Show this help message"
 
-.PHONY: setup setup-quick build-wasm-dev build-wasm-prod build-lib build dev dev-all watch-wasm watch-lib test test-ts test-rust benchmark typecheck check format clean clean-all publish-wasm-npm publish-wasm-jsr publish-lib-npm publish-lib-jsr publish-npm publish-jsr publish-all help install
+.PHONY: setup setup-quick build-wasm-dev build-wasm-prod build-lib build dev dev-all watch-wasm watch-lib test test-ts test-rust benchmark typecheck check format clean clean-all publish-wasm-npm publish-lib-npm publish-npm publish-all help install
