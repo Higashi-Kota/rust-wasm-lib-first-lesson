@@ -25,11 +25,6 @@ on:
         required: false
         type: boolean
         default: true
-      deploy_demo:
-        description: "Deploy demo site"
-        required: false
-        type: boolean
-        default: true
 
 concurrency:
   group: release-${{ github.ref }}
@@ -51,7 +46,6 @@ jobs:
       is_prerelease: ${{ steps.version.outputs.is_prerelease }}
       should_publish_npm: ${{ steps.flags.outputs.should_publish_npm }}
       should_publish_jsr: ${{ steps.flags.outputs.should_publish_jsr }}
-      should_deploy_demo: ${{ steps.flags.outputs.should_deploy_demo }}
 
     steps:
       - name: 📥 Checkout
@@ -82,11 +76,9 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should_publish_npm=${{ github.event.inputs.publish_npm }}" >> $GITHUB_OUTPUT
             echo "should_publish_jsr=${{ github.event.inputs.publish_jsr }}" >> $GITHUB_OUTPUT
-            echo "should_deploy_demo=${{ github.event.inputs.deploy_demo }}" >> $GITHUB_OUTPUT
           else
             echo "should_publish_npm=true" >> $GITHUB_OUTPUT
             echo "should_publish_jsr=true" >> $GITHUB_OUTPUT
-            echo "should_deploy_demo=true" >> $GITHUB_OUTPUT
           fi
 
       - name: 📋 Validate version format
@@ -397,7 +389,7 @@ jobs:
           echo "" >> changelog.md
           echo "- **npm**: \`npm install @nap5/gnrng-id@$VERSION\`" >> changelog.md
           echo "- **JSR**: \`deno add @nap5/gnrng-id@$VERSION\`" >> changelog.md
-          echo "- **Demo**: [GNRNG-ID Demo](https://gnrng-id-demo.example.com)" >> changelog.md
+          echo "- **Docker**: \`docker pull ghcr.io/${{ github.repository }}:$VERSION\`" >> changelog.md
 
           cat changelog.md
 
@@ -420,7 +412,6 @@ jobs:
     name: 🐳 Build & Push Docker Image
     runs-on: ubuntu-latest
     needs: [validate, build]
-    if: needs.validate.outputs.should_deploy_demo == 'true'
     permissions:
       contents: read
       packages: write
@@ -467,30 +458,6 @@ jobs:
           echo "🐳 Built and pushed Docker images:"
           echo "${{ steps.meta.outputs.tags }}"
 
-  # Deploy demo site
-  deploy-demo:
-    name: 🌐 Deploy Demo Site
-    runs-on: ubuntu-latest
-    needs: [validate, build, docker-release]
-    if: needs.validate.outputs.should_deploy_demo == 'true'
-    environment: production
-    timeout-minutes: 15
-
-    steps:
-      - name: 🚀 Deploy to production
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          IMAGE="ghcr.io/${{ github.repository }}:$VERSION"
-
-          echo "🌐 Deploying GNRNG-ID Demo v$VERSION"
-          echo "📦 Docker Image: $IMAGE"
-          echo "🔗 Demo URL: https://gnrng-id-demo.example.com"
-
-          # ここに実際のデプロイ処理を追加
-          # 例: kubectl、docker-compose、クラウドプロバイダーAPI等
-
-          echo "✅ Demo site deployed successfully!"
-
   # Release summary
   release-summary:
     name: ✅ Release Summary
@@ -504,7 +471,6 @@ jobs:
         publish-jsr,
         github-release,
         docker-release,
-        deploy-demo,
       ]
 
     steps:
@@ -555,10 +521,8 @@ jobs:
           # Docker status
           if [ "${{ needs.docker-release.result }}" = "success" ]; then
             echo "| Docker | ✅ Published | [View Image](https://ghcr.io/${{ github.repository }}) |" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ needs.validate.outputs.should_deploy_demo }}" = "true" ]; then
-            echo "| Docker | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Docker | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| Docker | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -569,4 +533,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "# JSR (Deno)" >> $GITHUB_STEP_SUMMARY
           echo "deno add @nap5/gnrng-id@$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Docker" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository }}:$VERSION" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

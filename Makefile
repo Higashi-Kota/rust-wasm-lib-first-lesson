@@ -25,6 +25,7 @@ setup:
 	make clean
 	make build-wasm-dev
 	pnpm install --shamefully-hoist
+	make build-lib
 	@echo "Project setup completed successfully!"
 
 # クイックセットアップ

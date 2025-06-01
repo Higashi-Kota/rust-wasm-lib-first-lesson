@@ -5,7 +5,6 @@
 ```bash
 $ make clean-all
 $ make setup
-$ make build-lib
 $ pnpm dev
 ```
 
