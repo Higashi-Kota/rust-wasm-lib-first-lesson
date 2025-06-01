@@ -164,11 +164,17 @@ jobs:
           mkdir -p build-artifacts/lib-src
           cp -r packages/lib/src/* build-artifacts/lib-src/
 
-          # Config files
-          cp packages/lib/package.json build-artifacts/package.json
-          cp packages/lib/jsr.json build-artifacts/jsr.json
-          cp packages/lib/README.md build-artifacts/README.md
-          cp packages/lib/LICENSE build-artifacts/LICENSE
+          # WASM package config files
+          cp packages/crates/gnrng-id/package.json build-artifacts/wasm-package.json
+          cp packages/crates/gnrng-id/jsr.json build-artifacts/wasm-jsr.json
+          cp packages/crates/gnrng-id/README.md build-artifacts/wasm-README.md
+          cp LICENSE build-artifacts/wasm-LICENSE
+
+          # Library package config files
+          cp packages/lib/package.json build-artifacts/lib-package.json
+          cp packages/lib/jsr.json build-artifacts/lib-jsr.json
+          cp packages/lib/README.md build-artifacts/lib-README.md
+          cp packages/lib/LICENSE build-artifacts/lib-LICENSE
 
           # Verification
           echo "📋 Build artifacts contents:"
@@ -187,9 +193,9 @@ jobs:
           path: build-artifacts/
           retention-days: 1
 
-  # Publish to npm
-  publish-npm:
-    name: 📦 Publish to npm
+  # Publish WASM package to npm (1st stage)
+  publish-wasm-npm:
+    name: 📦 Publish WASM to npm
     runs-on: ubuntu-latest
     needs: [validate, build]
     if: needs.validate.outputs.should_publish_npm == 'true'
@@ -212,84 +218,68 @@ jobs:
           name: build-artifacts
           path: build-artifacts/
 
-      - name: 📦 Restore package structure for npm
+      - name: 📦 Restore WASM package structure for npm
         run: |
-          # lib ディレクトリ構造を再構築
-          mkdir -p packages/lib/dist
+          # WASM ディレクトリ構造を再構築
           mkdir -p packages/crates/gnrng-id/pkg
 
           # Build artifacts を正しい場所に配置
-          cp -r build-artifacts/lib-dist/* packages/lib/dist/
           cp -r build-artifacts/wasm-pkg/* packages/crates/gnrng-id/pkg/
-          cp build-artifacts/package.json packages/lib/package.json
-          cp build-artifacts/README.md packages/lib/README.md
-          cp build-artifacts/LICENSE packages/lib/LICENSE
+          cp build-artifacts/wasm-package.json packages/crates/gnrng-id/package.json
+          cp build-artifacts/wasm-README.md packages/crates/gnrng-id/README.md
+          cp build-artifacts/wasm-LICENSE packages/crates/gnrng-id/LICENSE
 
           # Verification
-          echo "📋 Restored structure:"
-          ls -la packages/lib/
-          ls -la packages/lib/dist/
+          echo "📋 Restored WASM package structure:"
+          ls -la packages/crates/gnrng-id/
           ls -la packages/crates/gnrng-id/pkg/
 
-      - name: 📦 Update package version and resolve workspace dependencies
+      - name: 📦 Update WASM package version
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
-          cd packages/lib
+          cd packages/crates/gnrng-id
 
-          echo "📋 Original package.json:"
+          echo "📋 Original WASM package.json:"
           cat package.json | jq '.'
 
           # Update package version using jq
-          echo "Updating package.json version to $VERSION..."
+          echo "Updating WASM package.json version to $VERSION..."
           jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp
           mv package.json.tmp package.json
 
-          # Resolve workspace dependencies for npm publishing
-          echo "Resolving workspace dependencies..."
-          # Replace workspace:* dependencies with actual file paths or remove them
-          # for npm publishing, we need to handle workspace dependencies differently
-
-          # Method 1: Remove workspace dependencies entirely (if they're dev dependencies)
-          jq 'del(.dependencies["@nap5/gnrng-id-wasm"]) | del(.devDependencies["@internal/utils"]) | del(.devDependencies["@internal/shared-config"])' package.json > package.json.tmp
-          mv package.json.tmp package.json
-
-          # Verify the final package.json
-          echo "📋 Final package.json for npm:"
-          cat package.json | jq '.'
-
-          echo "✅ Updated package.json version:"
+          echo "✅ Updated WASM package.json version:"
           jq -r '.version' package.json
 
-      - name: 🔍 Verify package contents for npm
+      - name: 🔍 Verify WASM package contents for npm
         run: |
-          cd packages/lib
-          echo "📋 Final package contents:"
+          cd packages/crates/gnrng-id
+          echo "📋 Final WASM package contents:"
           ls -la
-          echo "📋 Dist contents:"
-          ls -la dist/
+          echo "📋 Pkg contents:"
+          ls -la pkg/
           echo "📋 Package.json version:"
           node -p "require('./package.json').version"
 
           # npm pack のドライラン
           npm pack --dry-run
 
-      - name: 🚀 Publish to npm
+      - name: 🚀 Publish WASM to npm
         run: |
-          cd packages/lib
+          cd packages/crates/gnrng-id
           if [ "${{ needs.validate.outputs.is_prerelease }}" = "true" ]; then
             # prepublishOnlyをスキップしてpublish（CI環境では既にビルド・テスト済み）
             npm publish --access public --tag beta --ignore-scripts
-            echo "✅ Published pre-release to npm with 'beta' tag"
+            echo "✅ Published WASM pre-release to npm with 'beta' tag"
           else
             npm publish --access public --ignore-scripts
-            echo "✅ Published stable release to npm"
+            echo "✅ Published WASM stable release to npm"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  # Publish to JSR
-  publish-jsr:
-    name: 🦕 Publish to JSR
+  # Publish WASM package to JSR (1st stage)
+  publish-wasm-jsr:
+    name: 🦕 Publish WASM to JSR
     runs-on: ubuntu-latest
     needs: [validate, build]
     if: needs.validate.outputs.should_publish_jsr == 'true'
@@ -313,80 +303,255 @@ jobs:
           name: build-artifacts
           path: build-artifacts/
 
-      - name: 📦 Restore package structure for JSR
+      - name: 📦 Restore WASM package structure for JSR
         run: |
-          # lib ディレクトリ構造を再構築（JSRはソースが必要）
-          mkdir -p packages/lib/src
+          # WASM ディレクトリ構造を再構築
           mkdir -p packages/crates/gnrng-id/pkg
 
           # Build artifacts を正しい場所に配置
-          cp -r build-artifacts/lib-src/* packages/lib/src/
           cp -r build-artifacts/wasm-pkg/* packages/crates/gnrng-id/pkg/
-          cp build-artifacts/jsr.json packages/lib/jsr.json
-          cp build-artifacts/README.md packages/lib/README.md
-          cp build-artifacts/LICENSE packages/lib/LICENSE
+          cp build-artifacts/wasm-jsr.json packages/crates/gnrng-id/jsr.json
+          cp build-artifacts/wasm-README.md packages/crates/gnrng-id/README.md
+          cp build-artifacts/wasm-LICENSE packages/crates/gnrng-id/LICENSE
 
           # Verification
-          echo "📋 Restored structure for JSR:"
-          ls -la packages/lib/
-          ls -la packages/lib/src/
+          echo "📋 Restored WASM package structure for JSR:"
+          ls -la packages/crates/gnrng-id/
           ls -la packages/crates/gnrng-id/pkg/
 
-      - name: 📦 Update JSR version and clean config
+      - name: 📦 Update WASM JSR version and clean config
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
-          cd packages/lib
+          cd packages/crates/gnrng-id
 
-          echo "📋 Original jsr.json:"
+          echo "📋 Original WASM jsr.json:"
           cat jsr.json | jq '.'
 
           # Update JSR version using jq
-          echo "Updating jsr.json version to $VERSION..."
+          echo "Updating WASM jsr.json version to $VERSION..."
           jq --arg version "$VERSION" '.version = $version' jsr.json > jsr.json.tmp
           mv jsr.json.tmp jsr.json
 
           # Remove unstable field if it exists (JSR workspace issue)
-          echo "Cleaning JSR config..."
+          echo "Cleaning WASM JSR config..."
           jq 'del(.unstable)' jsr.json > jsr.json.tmp
           mv jsr.json.tmp jsr.json
 
-          # Remove any workspace-specific fields that might cause issues
-          jq 'del(.permissions.ffi) | del(.permissions.env) | del(.permissions.read) | del(.permissions.write) | del(.permissions.run) | del(.permissions.net)' jsr.json > jsr.json.tmp
-          mv jsr.json.tmp jsr.json
-
-          # Set minimal permissions for JSR
-          jq '.permissions = {}' jsr.json > jsr.json.tmp
-          mv jsr.json.tmp jsr.json
-
           # Verify the final jsr.json
-          echo "📋 Final jsr.json:"
+          echo "📋 Final WASM jsr.json:"
           cat jsr.json | jq '.'
 
-          echo "✅ Updated jsr.json version:"
+          echo "✅ Updated WASM jsr.json version:"
           jq -r '.version' jsr.json
 
-      - name: 🔍 Verify JSR config
+      - name: 🔍 Verify WASM JSR config
         run: |
-          cd packages/lib
-          echo "📋 JSR config:"
+          cd packages/crates/gnrng-id
+          echo "📋 WASM JSR config:"
           cat jsr.json
-          echo "📋 JSR version:"
+          echo "📋 WASM JSR version:"
           node -p "JSON.parse(require('fs').readFileSync('jsr.json', 'utf8')).version"
 
           # JSR publish のドライラン
           npx jsr publish --dry-run
 
-      - name: 🚀 Publish to JSR (OIDC)
+      - name: 🚀 Publish WASM to JSR (OIDC)
+        run: |
+          cd packages/crates/gnrng-id
+          npx jsr publish
+          echo "✅ Published WASM to JSR using OIDC authentication"
+
+  # Publish library package to npm (2nd stage)
+  publish-lib-npm:
+    name: 📦 Publish Library to npm
+    runs-on: ubuntu-latest
+    needs: [validate, build, publish-wasm-npm]
+    if: always() && needs.validate.outputs.should_publish_npm == 'true' && (needs.publish-wasm-npm.result == 'success' || needs.publish-wasm-npm.result == 'skipped')
+    environment: npm-publish
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout (for structure)
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: "https://registry.npmjs.org"
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: build-artifacts/
+
+      - name: 📦 Restore library package structure for npm
+        run: |
+          # lib ディレクトリ構造を再構築
+          mkdir -p packages/lib/dist
+
+          # Build artifacts を正しい場所に配置
+          cp -r build-artifacts/lib-dist/* packages/lib/dist/
+          cp build-artifacts/lib-package.json packages/lib/package.json
+          cp build-artifacts/lib-README.md packages/lib/README.md
+          cp build-artifacts/lib-LICENSE packages/lib/LICENSE
+
+          # Verification
+          echo "📋 Restored library package structure:"
+          ls -la packages/lib/
+          ls -la packages/lib/dist/
+
+      - name: 📦 Update library package version and dependencies
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          cd packages/lib
+
+          echo "📋 Original library package.json:"
+          cat package.json | jq '.'
+
+          # Update package version using jq
+          echo "Updating library package.json version to $VERSION..."
+          jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+          # Update WASM dependency version to the same version
+          echo "Updating WASM dependency version to $VERSION..."
+          jq --arg version "$VERSION" '.dependencies."@nap5/gnrng-id-wasm" = $version' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+          # Verify the final package.json
+          echo "📋 Final library package.json for npm:"
+          cat package.json | jq '.'
+
+          echo "✅ Updated library package.json version:"
+          jq -r '.version' package.json
+
+      - name: 🔍 Verify library package contents for npm
+        run: |
+          cd packages/lib
+          echo "📋 Final library package contents:"
+          ls -la
+          echo "📋 Dist contents:"
+          ls -la dist/
+          echo "📋 Package.json version:"
+          node -p "require('./package.json').version"
+
+          # npm pack のドライラン
+          npm pack --dry-run
+
+      - name: 🚀 Publish library to npm
+        run: |
+          cd packages/lib
+          if [ "${{ needs.validate.outputs.is_prerelease }}" = "true" ]; then
+            # prepublishOnlyをスキップしてpublish（CI環境では既にビルド・テスト済み）
+            npm publish --access public --tag beta --ignore-scripts
+            echo "✅ Published library pre-release to npm with 'beta' tag"
+          else
+            npm publish --access public --ignore-scripts
+            echo "✅ Published library stable release to npm"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Publish library package to JSR (2nd stage)
+  publish-lib-jsr:
+    name: 🦕 Publish Library to JSR
+    runs-on: ubuntu-latest
+    needs: [validate, build, publish-wasm-jsr]
+    if: always() && needs.validate.outputs.should_publish_jsr == 'true' && (needs.publish-wasm-jsr.result == 'success' || needs.publish-wasm-jsr.result == 'skipped')
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: 📥 Checkout (for structure)
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: build-artifacts/
+
+      - name: 📦 Restore library package structure for JSR
+        run: |
+          # lib ディレクトリ構造を再構築（JSRはソースが必要）
+          mkdir -p packages/lib/src
+
+          # Build artifacts を正しい場所に配置
+          cp -r build-artifacts/lib-src/* packages/lib/src/
+          cp build-artifacts/lib-jsr.json packages/lib/jsr.json
+          cp build-artifacts/lib-README.md packages/lib/README.md
+          cp build-artifacts/lib-LICENSE packages/lib/LICENSE
+
+          # Verification
+          echo "📋 Restored library package structure for JSR:"
+          ls -la packages/lib/
+          ls -la packages/lib/src/
+
+      - name: 📦 Update library JSR version and dependencies
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          cd packages/lib
+
+          echo "📋 Original library jsr.json:"
+          cat jsr.json | jq '.'
+
+          # Update JSR version using jq
+          echo "Updating library jsr.json version to $VERSION..."
+          jq --arg version "$VERSION" '.version = $version' jsr.json > jsr.json.tmp
+          mv jsr.json.tmp jsr.json
+
+          # Update WASM dependency version in imports
+          echo "Updating WASM dependency version to $VERSION..."
+          jq --arg version "$VERSION" '.imports."@nap5/gnrng-id-wasm" = ("npm:@nap5/gnrng-id-wasm@^" + $version)' jsr.json > jsr.json.tmp
+          mv jsr.json.tmp jsr.json
+
+          # Remove unstable field if it exists (JSR workspace issue)
+          echo "Cleaning library JSR config..."
+          jq 'del(.unstable)' jsr.json > jsr.json.tmp
+          mv jsr.json.tmp jsr.json
+
+          # Set minimal permissions for JSR
+          jq '.permissions = {"env": false, "ffi": true, "net": false, "read": false, "run": false, "write": false}' jsr.json > jsr.json.tmp
+          mv jsr.json.tmp jsr.json
+
+          # Verify the final jsr.json
+          echo "📋 Final library jsr.json:"
+          cat jsr.json | jq '.'
+
+          echo "✅ Updated library jsr.json version:"
+          jq -r '.version' jsr.json
+
+      - name: 🔍 Verify library JSR config
+        run: |
+          cd packages/lib
+          echo "📋 Library JSR config:"
+          cat jsr.json
+          echo "📋 Library JSR version:"
+          node -p "JSON.parse(require('fs').readFileSync('jsr.json', 'utf8')).version"
+
+          # JSR publish のドライラン
+          npx jsr publish --dry-run
+
+      - name: 🚀 Publish library to JSR (OIDC)
         run: |
           cd packages/lib
           npx jsr publish
-          echo "✅ Published to JSR using OIDC authentication"
+          echo "✅ Published library to JSR using OIDC authentication"
 
   # GitHub Release
   github-release:
     name: 📝 Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [validate, build, publish-npm, publish-jsr]
+    needs: [validate, build, publish-lib-npm, publish-lib-jsr]
     if: always() && needs.build.result == 'success'
     permissions:
       contents: write
@@ -421,8 +586,13 @@ jobs:
 
           echo "" >> changelog.md
           echo "## 📦 Installation" >> changelog.md
-          echo "- **npm**: \`npm install @nap5/gnrng-id@$VERSION\`" >> changelog.md
-          echo "- **JSR**: \`deno add @nap5/gnrng-id@$VERSION\`" >> changelog.md
+          echo "### npm" >> changelog.md
+          echo "- **Library**: \`npm install @nap5/gnrng-id@$VERSION\`" >> changelog.md
+          echo "- **WASM Core**: \`npm install @nap5/gnrng-id-wasm@$VERSION\`" >> changelog.md
+          echo "" >> changelog.md
+          echo "### JSR (Deno)" >> changelog.md
+          echo "- **Library**: \`deno add @nap5/gnrng-id@$VERSION\`" >> changelog.md
+          echo "- **WASM Core**: \`deno add @nap5/gnrng-id-wasm@$VERSION\`" >> changelog.md
 
       - name: 📝 Create Release
         uses: softprops/action-gh-release@v2
@@ -433,6 +603,7 @@ jobs:
           prerelease: ${{ needs.validate.outputs.is_prerelease == 'true' }}
           files: |
             build-artifacts/lib-dist/*
+            build-artifacts/wasm-pkg/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -489,8 +660,10 @@ jobs:
       [
         validate,
         build,
-        publish-npm,
-        publish-jsr,
+        publish-wasm-npm,
+        publish-wasm-jsr,
+        publish-lib-npm,
+        publish-lib-jsr,
         github-release,
         docker-release,
       ]
@@ -503,33 +676,59 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 📦 Publishing Status" >> $GITHUB_STEP_SUMMARY
-          echo "| Target | Status | Link |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|--------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Target | Status | Link |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|--------|------|" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.publish-npm.result }}" = "success" ]; then
-            echo "| npm | ✅ Published | [View](https://www.npmjs.com/package/@nap5/gnrng-id) |" >> $GITHUB_STEP_SUMMARY
+          # WASM Package Status
+          if [ "${{ needs.publish-wasm-npm.result }}" = "success" ]; then
+            echo "| @nap5/gnrng-id-wasm | npm | ✅ Published | [View](https://www.npmjs.com/package/@nap5/gnrng-id-wasm) |" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.validate.outputs.should_publish_npm }}" = "true" ]; then
-            echo "| npm | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| @nap5/gnrng-id-wasm | npm | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| npm | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| @nap5/gnrng-id-wasm | npm | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          if [ "${{ needs.publish-jsr.result }}" = "success" ]; then
-            echo "| JSR | ✅ Published | [View](https://jsr.io/@nap5/gnrng-id) |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.publish-wasm-jsr.result }}" = "success" ]; then
+            echo "| @nap5/gnrng-id-wasm | JSR | ✅ Published | [View](https://jsr.io/@nap5/gnrng-id-wasm) |" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.validate.outputs.should_publish_jsr }}" = "true" ]; then
-            echo "| JSR | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| @nap5/gnrng-id-wasm | JSR | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| JSR | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| @nap5/gnrng-id-wasm | JSR | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          if [ "${{ needs.github-release.result }}" = "success" ]; then
-            echo "| GitHub | ✅ Created | [View](https://github.com/${{ github.repository }}/releases/tag/v$VERSION) |" >> $GITHUB_STEP_SUMMARY
+          # Library Package Status
+          if [ "${{ needs.publish-lib-npm.result }}" = "success" ]; then
+            echo "| @nap5/gnrng-id | npm | ✅ Published | [View](https://www.npmjs.com/package/@nap5/gnrng-id) |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.validate.outputs.should_publish_npm }}" = "true" ]; then
+            echo "| @nap5/gnrng-id | npm | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| GitHub | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| @nap5/gnrng-id | npm | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.publish-lib-jsr.result }}" = "success" ]; then
+            echo "| @nap5/gnrng-id | JSR | ✅ Published | [View](https://jsr.io/@nap5/gnrng-id) |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.validate.outputs.should_publish_jsr }}" = "true" ]; then
+            echo "| @nap5/gnrng-id | JSR | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| @nap5/gnrng-id | JSR | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Other Services Status
+          if [ "${{ needs.github-release.result }}" = "success" ]; then
+            echo "| GitHub Release | GitHub | ✅ Created | [View](https://github.com/${{ github.repository }}/releases/tag/v$VERSION) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| GitHub Release | GitHub | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [ "${{ needs.docker-release.result }}" = "success" ]; then
-            echo "| Docker | ✅ Published | [View](https://ghcr.io/${{ github.repository }}) |" >> $GITHUB_STEP_SUMMARY
+            echo "| Docker Image | GHCR | ✅ Published | [View](https://ghcr.io/${{ github.repository }}) |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Docker | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| Docker Image | GHCR | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Release Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pre-release**: ${{ needs.validate.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Published to npm**: ${{ needs.validate.outputs.should_publish_npm }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Published to JSR**: ${{ needs.validate.outputs.should_publish_jsr }}" >> $GITHUB_STEP_SUMMARY
