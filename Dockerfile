@@ -72,7 +72,7 @@ COPY packages/app/ ./packages/app/
 RUN echo "Building @internal/utils..." && \
     pnpm --filter @internal/utils build && \
     echo "Building @nap5/gnrng-id..." && \
-    pnpm --filter @nap5/gnrng-id build && \
+    pnpm --filter @nap5/gnrng-id build:ci && \
     echo "Building React app..." && \
     pnpm --filter app build
 
