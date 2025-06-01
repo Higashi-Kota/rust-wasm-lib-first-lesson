@@ -21,8 +21,8 @@
     "useTabs": false
   },
   "imports": {
-    "@internal/utils": "../utils/src/index.ts",
-    "@nap5/gnrng-id-wasm": "../crates/gnrng-id/pkg/gnrng_id.js"
+    "nanoid": "npm:nanoid@^5.1.5",
+    "@nap5/gnrng-id-wasm": "npm:@nap5/gnrng-id-wasm@^0.1.0"
   },
   "lint": {
     "rules": {

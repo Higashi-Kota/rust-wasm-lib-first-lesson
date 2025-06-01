@@ -11,8 +11,6 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@internal/utils": ["../utils/src/index.ts"],
-      "@internal/utils/*": ["../utils/src/*"],
       "@nap5/gnrng-id-wasm": ["../crates/gnrng-id/pkg"]
     }
   },

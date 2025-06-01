@@ -62,14 +62,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      '@internal/utils': resolve(__dirname, '../utils/src/index.ts'),
       '@nap5/gnrng-id-wasm': resolve(__dirname, '../crates/gnrng-id/pkg'),
     },
   },
 
   // TypeScript設定
   esbuild: {
-    target: 'node18',
+    target: 'node22',
   },
 
   // 依存関係の最適化
