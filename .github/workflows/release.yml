@@ -231,12 +231,34 @@ jobs:
           ls -la packages/lib/dist/
           ls -la packages/crates/gnrng-id/pkg/
 
-      - name: 📦 Update package version
+      - name: 📦 Update package version and resolve workspace dependencies
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
           cd packages/lib
-          npm version $VERSION --no-git-tag-version
-          echo "✅ Updated package version to $VERSION"
+
+          echo "📋 Original package.json:"
+          cat package.json | jq '.'
+
+          # Update package version using jq
+          echo "Updating package.json version to $VERSION..."
+          jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+          # Resolve workspace dependencies for npm publishing
+          echo "Resolving workspace dependencies..."
+          # Replace workspace:* dependencies with actual file paths or remove them
+          # for npm publishing, we need to handle workspace dependencies differently
+
+          # Method 1: Remove workspace dependencies entirely (if they're dev dependencies)
+          jq 'del(.dependencies["@nap5/gnrng-id-wasm"]) | del(.devDependencies["@internal/utils"]) | del(.devDependencies["@internal/shared-config"])' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+          # Verify the final package.json
+          echo "📋 Final package.json for npm:"
+          cat package.json | jq '.'
+
+          echo "✅ Updated package.json version:"
+          jq -r '.version' package.json
 
       - name: 🔍 Verify package contents for npm
         run: |
@@ -309,13 +331,38 @@ jobs:
           ls -la packages/lib/src/
           ls -la packages/crates/gnrng-id/pkg/
 
-      - name: 📦 Update JSR version
+      - name: 📦 Update JSR version and clean config
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
           cd packages/lib
+
+          echo "📋 Original jsr.json:"
+          cat jsr.json | jq '.'
+
+          # Update JSR version using jq
+          echo "Updating jsr.json version to $VERSION..."
           jq --arg version "$VERSION" '.version = $version' jsr.json > jsr.json.tmp
           mv jsr.json.tmp jsr.json
-          echo "✅ Updated JSR version to $VERSION"
+
+          # Remove unstable field if it exists (JSR workspace issue)
+          echo "Cleaning JSR config..."
+          jq 'del(.unstable)' jsr.json > jsr.json.tmp
+          mv jsr.json.tmp jsr.json
+
+          # Remove any workspace-specific fields that might cause issues
+          jq 'del(.permissions.ffi) | del(.permissions.env) | del(.permissions.read) | del(.permissions.write) | del(.permissions.run) | del(.permissions.net)' jsr.json > jsr.json.tmp
+          mv jsr.json.tmp jsr.json
+
+          # Set minimal permissions for JSR
+          jq '.permissions = {}' jsr.json > jsr.json.tmp
+          mv jsr.json.tmp jsr.json
+
+          # Verify the final jsr.json
+          echo "📋 Final jsr.json:"
+          cat jsr.json | jq '.'
+
+          echo "✅ Updated jsr.json version:"
+          jq -r '.version' jsr.json
 
       - name: 🔍 Verify JSR config
         run: |
