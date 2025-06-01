@@ -277,89 +277,23 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  # Publish WASM package to JSR (1st stage)
+    # Publish WASM package to JSR (1st stage) - SKIP for WASM
   publish-wasm-jsr:
-    name: 🦕 Publish WASM to JSR
+    name: 🦕 Publish WASM to JSR (SKIPPED)
     runs-on: ubuntu-latest
     needs: [validate, build]
-    if: needs.validate.outputs.should_publish_jsr == 'true'
+    if: false # WASMパッケージはJSRをスキップ
     timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
 
     steps:
-      - name: 📥 Checkout (for structure)
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: 📥 Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: build-artifacts/
-
-      - name: 📦 Restore WASM package structure for JSR
+      - name: ℹ️ Skip WASM JSR Publishing
         run: |
-          # WASM ディレクトリ構造を再構築
-          mkdir -p packages/crates/gnrng-id/pkg
-
-          # Build artifacts を正しい場所に配置
-          cp -r build-artifacts/wasm-pkg/* packages/crates/gnrng-id/pkg/
-          cp build-artifacts/wasm-jsr.json packages/crates/gnrng-id/jsr.json
-          cp build-artifacts/wasm-README.md packages/crates/gnrng-id/README.md
-          cp build-artifacts/wasm-LICENSE packages/crates/gnrng-id/LICENSE
-
-          # Verification
-          echo "📋 Restored WASM package structure for JSR:"
-          ls -la packages/crates/gnrng-id/
-          ls -la packages/crates/gnrng-id/pkg/
-
-      - name: 📦 Update WASM JSR version and clean config
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          cd packages/crates/gnrng-id
-
-          echo "📋 Original WASM jsr.json:"
-          cat jsr.json | jq '.'
-
-          # Update JSR version using jq
-          echo "Updating WASM jsr.json version to $VERSION..."
-          jq --arg version "$VERSION" '.version = $version' jsr.json > jsr.json.tmp
-          mv jsr.json.tmp jsr.json
-
-          # Remove unstable field if it exists (JSR workspace issue)
-          echo "Cleaning WASM JSR config..."
-          jq 'del(.unstable)' jsr.json > jsr.json.tmp
-          mv jsr.json.tmp jsr.json
-
-          # Verify the final jsr.json
-          echo "📋 Final WASM jsr.json:"
-          cat jsr.json | jq '.'
-
-          echo "✅ Updated WASM jsr.json version:"
-          jq -r '.version' jsr.json
-
-      - name: 🔍 Verify WASM JSR config
-        run: |
-          cd packages/crates/gnrng-id
-          echo "📋 WASM JSR config:"
-          cat jsr.json
-          echo "📋 WASM JSR version:"
-          node -p "JSON.parse(require('fs').readFileSync('jsr.json', 'utf8')).version"
-
-          # JSR publish のドライラン
-          npx jsr publish --dry-run
-
-      - name: 🚀 Publish WASM to JSR (OIDC)
-        run: |
-          cd packages/crates/gnrng-id
-          npx jsr publish
-          echo "✅ Published WASM to JSR using OIDC authentication"
+          echo "⏭️ Skipping WASM package JSR publishing"
+          echo "WASM packages are not ideal for JSR (TypeScript-first registry)"
+          echo "WASM core will be published to npm only"
 
   # Publish library package to npm (2nd stage)
   publish-lib-npm:
@@ -458,8 +392,8 @@ jobs:
   publish-lib-jsr:
     name: 🦕 Publish Library to JSR
     runs-on: ubuntu-latest
-    needs: [validate, build, publish-wasm-jsr]
-    if: always() && needs.validate.outputs.should_publish_jsr == 'true' && (needs.publish-wasm-jsr.result == 'success' || needs.publish-wasm-jsr.result == 'skipped')
+    needs: [validate, build] # publish-wasm-jsrの依存を削除
+    if: needs.validate.outputs.should_publish_jsr == 'true'
     timeout-minutes: 10
     permissions:
       contents: read
@@ -509,7 +443,7 @@ jobs:
           jq --arg version "$VERSION" '.version = $version' jsr.json > jsr.json.tmp
           mv jsr.json.tmp jsr.json
 
-          # Update WASM dependency version in imports
+          # Update WASM dependency version in imports (npmから取得)
           echo "Updating WASM dependency version to $VERSION..."
           jq --arg version "$VERSION" '.imports."@nap5/gnrng-id-wasm" = ("npm:@nap5/gnrng-id-wasm@^" + $version)' jsr.json > jsr.json.tmp
           mv jsr.json.tmp jsr.json
@@ -538,13 +472,14 @@ jobs:
           echo "📋 Library JSR version:"
           node -p "JSON.parse(require('fs').readFileSync('jsr.json', 'utf8')).version"
 
-          # JSR publish のドライラン
-          npx jsr publish --dry-run
+          # JSR publish のドライラン（--allow-dirtyフラグ追加）
+          npx jsr publish --dry-run --allow-dirty
 
       - name: 🚀 Publish library to JSR (OIDC)
         run: |
           cd packages/lib
-          npx jsr publish
+          # CI環境では一時的な変更があるため--allow-dirtyフラグを使用
+          npx jsr publish --allow-dirty
           echo "✅ Published library to JSR using OIDC authentication"
 
   # GitHub Release
