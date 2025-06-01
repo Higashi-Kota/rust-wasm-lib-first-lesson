@@ -277,10 +277,11 @@ jobs:
         run: |
           cd packages/lib
           if [ "${{ needs.validate.outputs.is_prerelease }}" = "true" ]; then
-            npm publish --access public --tag beta
+            # prepublishOnlyをスキップしてpublish（CI環境では既にビルド・テスト済み）
+            npm publish --access public --tag beta --ignore-scripts
             echo "✅ Published pre-release to npm with 'beta' tag"
           else
-            npm publish --access public
+            npm publish --access public --ignore-scripts
             echo "✅ Published stable release to npm"
           fi
         env:
