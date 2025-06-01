@@ -87,8 +87,11 @@ importers:
   packages/lib:
     dependencies:
       '@nap5/gnrng-id-wasm':
-        specifier: workspace:../crates/gnrng-id/pkg
+        specifier: ^0.1.0
         version: link:../crates/gnrng-id/pkg
+      nanoid:
+        specifier: ^5.1.5
+        version: 5.1.5
     devDependencies:
       '@biomejs/biome':
         specifier: 1.9.4

@@ -4,7 +4,8 @@
     "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson/issues"
   },
   "dependencies": {
-    "@nap5/gnrng-id-wasm": "workspace:../crates/gnrng-id/pkg"
+    "@nap5/gnrng-id-wasm": "^0.1.0",
+    "nanoid": "^5.1.5"
   },
   "description": "GNRNG (Good Night Random Number Generator) with ID generation utilities powered by WebAssembly",
   "devDependencies": {
@@ -67,15 +68,14 @@
   },
   "scripts": {
     "benchmark": "vitest bench --reporter=verbose src/benchmark.bench.ts",
-    "build": "pnpm run build:wasm && pnpm run build:lib",
+    "build": "pnpm run build:lib",
     "build:ci": "pnpm run build:lib",
     "build:lib": "tsup",
-    "build:wasm": "wasm-pack build ../crates/gnrng-id --target web --scope nap5 --release",
     "build:watch": "tsup --watch",
     "check": "biome check src",
     "check:fix": "biome check src --fix --unsafe",
-    "clean": "rm -rf dist ../crates/gnrng-id/pkg",
-    "dev": "pnpm run build:wasm && tsup --watch",
+    "clean": "rm -rf dist",
+    "dev": "tsup --watch",
     "format": "biome format --write src",
     "lint": "biome lint src",
     "lint:fix": "biome lint src --fix --unsafe",

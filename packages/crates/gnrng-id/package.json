@@ -1,0 +1,52 @@
+{
+  "name": "@nap5/gnrng-id-wasm",
+  "version": "0.1.0",
+  "description": "WebAssembly bindings for GNRNG (Good Night Random Number Generator) - Core Rust implementation",
+  "author": "Higashi Kota <higashi.kota@gri.jp>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson.git",
+    "directory": "packages/crates/gnrng-id"
+  },
+  "homepage": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson#readme",
+  "bugs": {
+    "url": "https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson/issues"
+  },
+  "keywords": ["wasm", "webassembly", "random", "gnrng", "rust", "bindings"],
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "files": ["pkg/*", "README.md", "LICENSE"],
+  "main": "./pkg/gnrng_id_wasm.js",
+  "module": "./pkg/gnrng_id_wasm.js",
+  "types": "./pkg/gnrng_id_wasm.d.ts",
+  "exports": {
+    ".": {
+      "types": "./pkg/gnrng_id_wasm.d.ts",
+      "import": "./pkg/gnrng_id_wasm.js",
+      "require": "./pkg/gnrng_id_wasm.js"
+    },
+    "./pkg/*": "./pkg/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "wasm-pack build --target web --scope nap5 --release",
+    "build:dev": "wasm-pack build --target web --scope nap5 --dev",
+    "test": "cargo test",
+    "check": "cargo check",
+    "clippy": "cargo clippy -- -D warnings",
+    "fmt": "cargo fmt --all -- --check",
+    "prepublishOnly": "npm run build"
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/sponsors/Higashi-Kota"
+  }
+}

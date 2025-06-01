@@ -35,7 +35,7 @@
     "env": false,
     "ffi": true,
     "net": false,
-    "read": true,
+    "read": false,
     "run": false,
     "write": false
   },
@@ -60,6 +60,5 @@
     "lint": "deno lint src/",
     "test": "deno test --allow-all src/"
   },
-  "unstable": ["ffi"],
   "version": "0.1.0"
 }
