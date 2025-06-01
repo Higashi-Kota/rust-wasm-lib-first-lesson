@@ -166,7 +166,6 @@ jobs:
 
           # WASM package config files
           cp packages/crates/gnrng-id/package.json build-artifacts/wasm-package.json
-          cp packages/crates/gnrng-id/jsr.json build-artifacts/wasm-jsr.json
           cp packages/crates/gnrng-id/README.md build-artifacts/wasm-README.md
           cp LICENSE build-artifacts/wasm-LICENSE
 
