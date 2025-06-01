@@ -1,25 +1,35 @@
-# App - Rust WASM × React デモアプリケーション
+# App - GNRNG-ID Demo Application
 
-RustのWebAssembly（WASM）モジュールとReact+TypeScriptを統合したモダンなWebアプリケーションのデモンストレーション
+React + TypeScript + Vite アプリケーションで @nap5/gnrng-id ライブラリのデモンストレーション
 
 ## 🎯 目的
 
-- **Rust WASM統合**: RustのWASMクレートとReactの相互運用のデモ
-- **高性能計算処理**: ブラウザ上でのネイティブレベルの処理速度
+- **GNRNG-ID統合**: @nap5/gnrng-id ライブラリの実践的な使用例
+- **パフォーマンステスト**: WASM vs TypeScript のベンチマーク比較
 - **開発体験**: ホットリロード対応の最新開発環境
-- **実用例**: 数学計算、テキスト処理、ユーティリティ機能の実装例
+- **実用例**: 乱数生成とID作成の実装例とパフォーマンス測定
 
 ## ✨ 特徴
 
-- 🦀 **Rust WASM統合** - 高速な計算処理をブラウザで実行  
+- 🦀 **@nap5/gnrng-id統合** - Rust WASM による高速な乱数生成とID作成  
 - ⚛️ **React 18** - モダンなUIライブラリとHooks
 - 🎨 **TailwindCSS** - レスポンシブでモダンなデザイン
 - ⚡ **Vite** - 高速な開発サーバーとビルドツール
 - 🧪 **Vitest** - 包括的なテストカバレッジ
-- 🔄 **ホットリロード** - Rust/React両方の変更を即座に反映
+- 📊 **ベンチマーク** - リアルタイムパフォーマンス測定
 - 📱 **レスポンシブ対応** - デスクトップ・モバイル両対応
 
 ## 🚀 起動方法
+
+### 前提条件
+
+```bash
+# WASMクレートのビルドが必要
+pnpm run build:wasm
+
+# または完全セットアップ
+pnpm run setup
+```
 
 ### 開発モード
 
@@ -53,20 +63,11 @@ src/
 ├── components/
 │   ├── Header.tsx              # アプリヘッダー
 │   ├── Footer.tsx              # アプリフッター
-│   ├── MathCalculator/         # 数学計算デモ
-│   │   ├── MathCalculator.tsx
-│   │   ├── MathCalculator.test.tsx
-│   │   └── index.ts
-│   ├── TextProcessor/          # テキスト処理デモ
-│   │   ├── TextProcessor.tsx
-│   │   ├── TextProcessor.test.tsx
-│   │   └── index.ts
-│   └── UtilityTools/           # ユーティリティデモ
-│       ├── UtilityTools.tsx
-│       ├── UtilityTools.test.tsx
-│       └── index.ts
+│   └── BenchmarkDemo.tsx       # メインコンポーネント
 ├── mocks/
 │   └── vitest.setup.ts         # テスト用WASMモック
+├── tests/
+│   └── gnrng-id.test.ts        # ライブラリ統合テスト
 ├── App.tsx                     # メインアプリケーション
 ├── main.tsx                    # エントリーポイント + WASM初期化
 └── index.css                   # グローバルスタイル
@@ -76,13 +77,16 @@ src/
 
 ```typescript
 // main.tsx でのWASM初期化
-import initMath from '@internal/wasm-math'
-import initText from '@internal/wasm-text' 
-import initUtils from '@internal/wasm-utils'
+import { initWasm } from '@nap5/gnrng-id'
 
 async function init() {
-  await Promise.all([initMath(), initText(), initUtils()])
-  // React アプリレンダリング
+  try {
+    await initWasm()
+    console.log('✅ GNRNG-ID WASM module initialized successfully!')
+    // React アプリレンダリング
+  } catch (error) {
+    console.error('❌ Failed to initialize GNRNG-ID WASM module:', error)
+  }
 }
 ```
 
@@ -92,12 +96,12 @@ async function init() {
 
 ```bash
 # 開発
-pnpm dev                  # React開発サーバー起動
+pnpm dev                  # React開発サーバー起動 (port 5000)
 pnpm dev:all             # WASM監視 + React開発サーバー（推奨）
 
 # ビルド
 pnpm build               # TypeScript + Vite 本番ビルド
-pnpm preview             # ビルド結果プレビュー
+pnpm preview             # ビルド結果プレビュー (port 5000)
 
 # テスト
 pnpm test                # テスト実行（watch モード）
@@ -121,8 +125,8 @@ pnpm package:check       # 依存関係の更新確認（taze）
 
 - **コンポーネントテスト**: React Testing Library + Vitest
 - **WASMモック**: テスト時はJavaScript実装で代替
-- **インテグレーションテスト**: ユーザー操作シナリオの検証
-- **カバレッジ**: コンポーネント・フック・ユーティリティの網羅
+- **統合テスト**: @nap5/gnrng-id ライブラリの動作確認
+- **カバレッジ**: コンポーネント・統合機能の網羅
 
 ### テスト実行パターン
 
@@ -145,12 +149,11 @@ pnpm test:ui
 
 ```typescript
 // vitest.setup.ts
-vi.mock('@internal/wasm-math', () => ({
-  add: vi.fn((a: number, b: number) => a + b),
-  div: vi.fn((a: number, b: number) => {
-    if (b === 0) throw new Error('0で除算することはできません')
-    return a / b
-  }),
+vi.mock('@nap5/gnrng-id', () => ({
+  initWasm: vi.fn().mockResolvedValue(undefined),
+  Gnrng: MockGnrng,
+  createIdBySeed: vi.fn(),
+  IdType: { User: 'user', Team: 'team', Project: 'project', Default: 'default' },
   // ...
 }))
 ```
@@ -161,11 +164,9 @@ vi.mock('@internal/wasm-math', () => ({
 
 ```json
 {
-  "@internal/wasm-math": "workspace:*",    // 数学計算WASM
-  "@internal/wasm-text": "workspace:*",   // テキスト処理WASM
-  "@internal/wasm-utils": "workspace:*",  // ユーティリティWASM
-  "react": "^18.3.1",                     // UIライブラリ
-  "react-dom": "^18.3.1"                  // DOM操作
+  "@nap5/gnrng-id": "workspace:*",    // GNRNG-ID WASMライブラリ
+  "react": "^18.3.1",                 // UIライブラリ
+  "react-dom": "^18.3.1"              // DOM操作
 }
 ```
 
@@ -176,7 +177,7 @@ vi.mock('@internal/wasm-math', () => ({
   "@vitejs/plugin-react": "^4.4.1",      // React Viteプラグイン
   "@testing-library/react": "^16.3.0",   // コンポーネントテスト
   "tailwindcss": "^3.4.17",              // CSSフレームワーク
-  "vitest": "^3.1.4",                     // テストフレームワーク
+  "vitest": "^3.1.4",                    // テストフレームワーク
   "@biomejs/biome": "1.9.4"               // リンター・フォーマッター
 }
 ```
@@ -189,58 +190,58 @@ vi.mock('@internal/wasm-math', () => ({
 // tailwind.config.js
 export default {
   content: [
+    './index.html', 
     './src/**/*.{js,ts,jsx,tsx}',
-    '../dock/src/**/*.{js,ts,jsx,tsx}'  // 他パッケージも含める
   ],
-  // 共通設定を継承
   ...sharedConfig,
 }
 ```
 
-## 🔧 カスタマイズ
+## 🔧 機能詳細
 
-### 新しいWASMモジュールの追加
+### ベンチマークデモ
+
+**BenchmarkDemo** コンポーネントでは以下のテストが実行できます：
+
+- **🎲 GNRNG 乱数生成**: 個別 vs バッチ処理のパフォーマンス比較
+- **🎯 GNRNG 範囲乱数**: 指定範囲内の整数生成のベンチマーク
+- **🆔 シードID生成**: 決定的ID生成のパフォーマンス測定
+- **🔄 混合処理**: 乱数とID生成を組み合わせた実用的なテスト
+
+### パフォーマンス測定
 
 ```typescript
-// 1. WASMクレートを packages/crates/ に追加
-// 2. main.tsx で初期化を追加
-import initNewModule from '@internal/wasm-new-module'
-
-async function init() {
-  await Promise.all([
-    initMath(), 
-    initText(), 
-    initUtils(),
-    initNewModule()  // 追加
-  ])
-}
-
-// 3. 新しいコンポーネントで使用
-import { newFunction } from '@internal/wasm-new-module'
+// 典型的なベンチマーク実行例
+const wasmRng = new Gnrng('benchmark-seed')
+const start = performance.now()
+const results = wasmRng.nextBatch(10000) // バッチ処理
+const end = performance.now()
+console.log(`処理時間: ${end - start}ms`)
+wasmRng.free()
 ```
 
-### 新しいデモコンポーネントの追加
+## 🚀 デプロイ
 
-```typescript
-// components/NewDemo/NewDemo.tsx
-export function NewDemo() {
-  // WASMモジュール使用
-  return <section className="card">...</section>
-}
+### 静的ファイル
 
-// App.tsx で追加
-import { NewDemo } from '@/components/NewDemo'
+```bash
+# ビルド
+pnpm build
 
-function App() {
-  return (
-    <div className="grid gap-8 grid-auto-fit">
-      <MathCalculator />
-      <TextProcessor />
-      <UtilityTools />
-      <NewDemo />  {/* 追加 */}
-    </div>
-  )
-}
+# dist/ フォルダが生成される
+# 任意の静的ホスティングサービスにデプロイ可能
+```
+
+### Docker
+
+プロジェクトルートの `Dockerfile` を使用：
+
+```bash
+# Dockerビルド
+docker build -t gnrng-id-demo .
+
+# 実行
+docker run -p 3000:3000 gnrng-id-demo
 ```
 
 ## 🚨 トラブルシューティング
@@ -269,29 +270,33 @@ rm -rf node_modules/.vitest
 pnpm test:run
 ```
 
+#### 4. ホットリロードが効かない
+```bash
+# Viteキャッシュクリア
+pnpm dev --force
+```
+
 ## 🔗 関連パッケージ
 
-- [`@internal/wasm-math`](../crates/wasm-math) - 数学計算WASMクレート
-- [`@internal/wasm-text`](../crates/wasm-text) - テキスト処理WASMクレート  
-- [`@internal/wasm-utils`](../crates/wasm-utils) - ユーティリティWASMクレート
+- [`@nap5/gnrng-id`](../lib) - GNRNG-ID WASMライブラリ
 - [`@internal/utils`](../utils) - TypeScriptユーティリティライブラリ
 - [`@internal/shared-config`](../shared-config) - 共通設定ファイル
 
-## 📈 パフォーマンス
+## 📈 パフォーマンス期待値
 
 ### WASM vs JavaScript比較
 
-| 処理 | JavaScript | WASM (Rust) | 改善倍率 |
-|------|------------|-------------|----------|
-| フィボナッチ数列(n=40) | ~100ms | ~5ms | **20x** |
-| 素数判定(大きな数) | ~50ms | ~3ms | **16x** |
-| テキスト処理(長文) | ~20ms | ~2ms | **10x** |
+TBD
+
+- 個別より、バッチ実行の方が基本早い
+- gnrngはバッチサイズ大きいほど有利で早い
+- createIdはバッチサイズが小さい（100個ほど）とNativeの方が早く、バッチサイズが大きい（1000個以上）とwasmの方が早い
 
 ### 最適化のポイント
 
-- **バッチ処理**: 複数の計算を一度にWASMに送信
-- **メモリ効率**: WASMでの文字列・配列の効率的な扱い
-- **並列処理**: Promise.allによる非同期処理の並列化
+- **バッチ処理**: 複数の処理を一度にWASMに送信
+- **メモリ効率**: 適切な`free()`呼び出しでメモリリーク防止
+- **並列処理**: 非同期処理での適切な初期化タイミング
 
 ---
 

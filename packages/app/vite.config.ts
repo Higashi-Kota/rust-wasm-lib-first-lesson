@@ -1,5 +1,5 @@
-import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
+import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // https://vitejs.dev/config/
@@ -16,23 +16,23 @@ export default defineConfig({
     include: ['react', 'react-dom'],
     exclude: ['lucide-react', '@internal/utils'],
   },
-   // ビルド設定
+  // ビルド設定
   build: {
     target: 'esnext',
     rollupOptions: {
       // WASMファイルを静的アセットとして扱う
       external: [],
-    }
+    },
   },
   // WASM関連の設定
   server: {
     fs: {
       // WASMファイルへのアクセスを許可
-      allow: ['..', '../..']
+      allow: ['..', '../..'],
     },
     // WASMクレートのpkgディレクトリを監視してホットリロード
     watch: {
-      ignored: ['!**/packages/crates/**/pkg/**']
-    }
+      ignored: ['!**/packages/crates/**/pkg/**'],
+    },
   },
 })

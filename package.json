@@ -1,4 +1,10 @@
 {
+  "name": "rust-wasm-react-starter",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Rust WASM × React スターターキット with モノレポ構成",
+  "workspaces": ["packages/*", "packages/crates/*/pkg"],
+  "type": "module",
   "scripts": {
     "clean:modules": "find packages -type d -name node_modules -prune -exec rm -rf {} +",
     "clean:build": "find packages -name '*.tsbuildinfo' -delete && find packages -type d -name dist -exec rm -rf {} +",
@@ -59,5 +65,27 @@
     "demo:dev": "pnpm run dev:all",
     "demo:build": "pnpm run build && pnpm --filter app build",
     "demo:preview": "pnpm --filter app preview"
-  }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=22.11.0",
+    "pnpm": ">=10.11.0"
+  },
+  "volta": {
+    "node": "22.11.0",
+    "pnpm": "10.11.0"
+  },
+  "keywords": [
+    "rust",
+    "webassembly",
+    "wasm",
+    "react",
+    "typescript",
+    "vite",
+    "monorepo",
+    "pnpm-workspace"
+  ]
 }

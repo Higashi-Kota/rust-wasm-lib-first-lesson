@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config'
 import { resolve } from 'node:path'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
@@ -13,8 +13,8 @@ export default defineConfig({
 
     // テストファイルのパターン（.tsx/.jsx を追加）
     include: [
-      'src/**/*.{test,spec}.{js,ts,jsx,tsx}', 
-      'tests/**/*.{test,spec}.{js,ts,jsx,tsx}'
+      'src/**/*.{test,spec}.{js,ts,jsx,tsx}',
+      'tests/**/*.{test,spec}.{js,ts,jsx,tsx}',
     ],
 
     // カバレッジ設定
@@ -23,10 +23,10 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
-        'src/**/*.{test,spec}.{ts,tsx}', 
+        'src/**/*.{test,spec}.{ts,tsx}',
         'src/index.ts',
         'src/main.tsx',
-        'src/mocks/**'
+        'src/mocks/**',
       ],
     },
   },

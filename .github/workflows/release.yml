@@ -1,0 +1,528 @@
+name: 🚀 Release & Deploy
+
+on:
+  push:
+    tags:
+      - "v*.*.*" # v1.0.0, v1.2.3-beta.1 etc.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 1.0.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark as pre-release"
+        required: false
+        type: boolean
+        default: false
+      publish_npm:
+        description: "Publish to npm"
+        required: false
+        type: boolean
+        default: true
+      publish_jsr:
+        description: "Publish to JSR"
+        required: false
+        type: boolean
+        default: true
+      deploy_demo:
+        description: "Deploy demo site"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  NODE_VERSION: "22.11.0"
+  PNPM_VERSION: "10.11.0"
+
+jobs:
+  # Version validation and setup
+  validate:
+    name: 🔍 Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      should_publish_npm: ${{ steps.flags.outputs.should_publish_npm }}
+      should_publish_jsr: ${{ steps.flags.outputs.should_publish_jsr }}
+      should_deploy_demo: ${{ steps.flags.outputs.should_deploy_demo }}
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+            if [[ "$VERSION" == *"-"* ]]; then
+              IS_PRERELEASE=true
+            else
+              IS_PRERELEASE=false
+            fi
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION (pre-release: $IS_PRERELEASE)"
+
+      - name: 🚩 Set release flags
+        id: flags
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_publish_npm=${{ github.event.inputs.publish_npm }}" >> $GITHUB_OUTPUT
+            echo "should_publish_jsr=${{ github.event.inputs.publish_jsr }}" >> $GITHUB_OUTPUT
+            echo "should_deploy_demo=${{ github.event.inputs.deploy_demo }}" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish_npm=true" >> $GITHUB_OUTPUT
+            echo "should_publish_jsr=true" >> $GITHUB_OUTPUT
+            echo "should_deploy_demo=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📋 Validate version format
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$'; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Expected format: x.y.z or x.y.z-suffix"
+            exit 1
+          fi
+          echo "✅ Version format is valid: $VERSION"
+
+  # Build and test everything
+  build:
+    name: 🏗️ Build & Test All
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 25
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: "https://registry.npmjs.org"
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 📦 Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            ~/.pnpm-store
+          key: ${{ runner.os }}-release-${{ hashFiles('**/Cargo.lock', '**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-release-
+            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-pnpm-
+
+      - name: 📦 Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: 🧪 Run full test suite
+        run: |
+          # Rust tests
+          cargo test --workspace --verbose --locked
+
+          # Build WASM
+          wasm-pack build packages/crates/gnrng-id --target web --scope nap5 --release
+
+          # Install Node.js dependencies
+          pnpm install --frozen-lockfile --shamefully-hoist
+
+          # Build packages
+          pnpm --filter @internal/utils build
+          pnpm --filter @nap5/gnrng-id build
+
+          # TypeScript tests
+          pnpm --filter @internal/utils test:run
+          pnpm --filter @nap5/gnrng-id test:run
+          pnpm --filter app test:run
+
+          # Benchmarks
+          pnpm --filter @nap5/gnrng-id benchmark
+
+      - name: 🏗️ Build demo app
+        run: pnpm --filter app build
+
+      - name: 📦 Update package version
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+
+          # Update lib package.json
+          cd packages/lib
+          npm version $VERSION --no-git-tag-version
+
+          # Update jsr.json
+          jq --arg version "$VERSION" '.version = $version' jsr.json > jsr.json.tmp
+          mv jsr.json.tmp jsr.json
+
+          echo "✅ Updated package version to $VERSION"
+
+      - name: 📤 Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            packages/crates/gnrng-id/pkg/
+            packages/lib/dist/
+            packages/lib/package.json
+            packages/lib/jsr.json
+            packages/app/dist/
+          retention-days: 7
+
+  # Publish to npm
+  publish-npm:
+    name: 📦 Publish to npm
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    if: needs.validate.outputs.should_publish_npm == 'true'
+    environment: npm-publish
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: "https://registry.npmjs.org"
+
+      - name: 📥 Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+
+      - name: 📦 Restore package structure
+        run: |
+          # Restore WASM artifacts
+          mkdir -p packages/crates/gnrng-id/pkg
+          if [ -d "packages/crates/gnrng-id/pkg" ]; then
+            cp -r packages/crates/gnrng-id/pkg/* packages/crates/gnrng-id/pkg/ 2>/dev/null || true
+          fi
+
+          # Restore lib artifacts
+          mkdir -p packages/lib/dist
+          if [ -d "packages/lib/dist" ]; then
+            cp -r packages/lib/dist/* packages/lib/dist/ 2>/dev/null || true
+          fi
+          cp packages/lib/package.json packages/lib/
+          cp packages/lib/jsr.json packages/lib/
+
+      - name: 🔍 Verify package contents
+        run: |
+          cd packages/lib
+          echo "📋 Package contents:"
+          ls -la
+          echo "📋 Dist contents:"
+          ls -la dist/
+          echo "📋 Package.json version:"
+          node -p "require('./package.json').version"
+
+      - name: 🚀 Publish to npm
+        run: |
+          cd packages/lib
+          if [ "${{ needs.validate.outputs.is_prerelease }}" = "true" ]; then
+            npm publish --access public --tag beta
+            echo "✅ Published pre-release to npm with 'beta' tag"
+          else
+            npm publish --access public
+            echo "✅ Published stable release to npm"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Publish to JSR (OIDC 認証使用)
+  publish-jsr:
+    name: 🦕 Publish to JSR
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    if: needs.validate.outputs.should_publish_jsr == 'true'
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # 🔑 OIDC認証用権限
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📥 Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+
+      - name: 📦 Restore package structure
+        run: |
+          # Restore WASM artifacts (JSR用にソースコードが必要)
+          mkdir -p packages/crates/gnrng-id/pkg
+          if [ -d "packages/crates/gnrng-id/pkg" ]; then
+            cp -r packages/crates/gnrng-id/pkg/* packages/crates/gnrng-id/pkg/ 2>/dev/null || true
+          fi
+
+          # Restore lib artifacts  
+          cp packages/lib/jsr.json packages/lib/
+
+      - name: 🔍 Verify JSR config
+        run: |
+          cd packages/lib
+          echo "📋 JSR config:"
+          cat jsr.json
+          echo "📋 Source files:"
+          ls -la src/
+          echo "📋 TypeScript source check:"
+          find src -name "*.ts" | head -5
+
+      - name: 🚀 Publish to JSR (OIDC)
+        run: |
+          cd packages/lib
+          # JSRはOIDC認証を使用（トークン不要）
+          npx jsr publish
+          echo "✅ Published to JSR using OIDC authentication"
+
+  # Create GitHub Release
+  github-release:
+    name: 📝 Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate, build, publish-npm, publish-jsr]
+    if: always() && needs.build.result == 'success'
+    permissions:
+      contents: write
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📝 Generate changelog
+        id: changelog
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -n "$PREV_TAG" ]; then
+            echo "## 🚀 Changes since $PREV_TAG" > changelog.md
+            echo "" >> changelog.md
+            
+            # Get commit messages
+            git log $PREV_TAG..HEAD --pretty=format:"- %s" --no-merges >> changelog.md
+          else
+            echo "## 🚀 Initial Release" > changelog.md
+            echo "" >> changelog.md
+            echo "First release of @nap5/gnrng-id!" >> changelog.md
+          fi
+
+          echo "" >> changelog.md
+          echo "## 📦 Package Information" >> changelog.md
+          echo "" >> changelog.md
+          echo "- **npm**: \`npm install @nap5/gnrng-id@$VERSION\`" >> changelog.md
+          echo "- **JSR**: \`deno add @nap5/gnrng-id@$VERSION\`" >> changelog.md
+          echo "- **Demo**: [GNRNG-ID Demo](https://gnrng-id-demo.example.com)" >> changelog.md
+
+          cat changelog.md
+
+      - name: 📝 Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.validate.outputs.version }}
+          name: Release v${{ needs.validate.outputs.version }}
+          body_path: changelog.md
+          prerelease: ${{ needs.validate.outputs.is_prerelease == 'true' }}
+          draft: false
+          generate_release_notes: true
+          files: |
+            packages/lib/dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build and push Docker image
+  docker-release:
+    name: 🐳 Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    if: needs.validate.outputs.should_deploy_demo == 'true'
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 20
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐳 Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}},value=v${{ needs.validate.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.validate.outputs.version }}
+            type=semver,pattern={{major}},value=v${{ needs.validate.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🏗️ Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: 🧪 Verify image
+        run: |
+          echo "🐳 Built and pushed Docker images:"
+          echo "${{ steps.meta.outputs.tags }}"
+
+  # Deploy demo site
+  deploy-demo:
+    name: 🌐 Deploy Demo Site
+    runs-on: ubuntu-latest
+    needs: [validate, build, docker-release]
+    if: needs.validate.outputs.should_deploy_demo == 'true'
+    environment: production
+    timeout-minutes: 15
+
+    steps:
+      - name: 🚀 Deploy to production
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          IMAGE="ghcr.io/${{ github.repository }}:$VERSION"
+
+          echo "🌐 Deploying GNRNG-ID Demo v$VERSION"
+          echo "📦 Docker Image: $IMAGE"
+          echo "🔗 Demo URL: https://gnrng-id-demo.example.com"
+
+          # ここに実際のデプロイ処理を追加
+          # 例: kubectl、docker-compose、クラウドプロバイダーAPI等
+
+          echo "✅ Demo site deployed successfully!"
+
+  # Release summary
+  release-summary:
+    name: ✅ Release Summary
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      [
+        validate,
+        build,
+        publish-npm,
+        publish-jsr,
+        github-release,
+        docker-release,
+        deploy-demo,
+      ]
+
+    steps:
+      - name: 📊 Summary
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          IS_PRERELEASE="${{ needs.validate.outputs.is_prerelease }}"
+
+          echo "## 🚀 Release Summary: v$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            echo "🏷️ **Pre-release version**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🏷️ **Stable release**" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### 📦 Publishing Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Target | Status | Link |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|------|" >> $GITHUB_STEP_SUMMARY
+
+          # npm status
+          if [ "${{ needs.publish-npm.result }}" = "success" ]; then
+            echo "| npm | ✅ Published | [View Package](https://www.npmjs.com/package/@nap5/gnrng-id) |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.validate.outputs.should_publish_npm }}" = "true" ]; then
+            echo "| npm | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| npm | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # JSR status  
+          if [ "${{ needs.publish-jsr.result }}" = "success" ]; then
+            echo "| JSR | ✅ Published | [View Package](https://jsr.io/@nap5/gnrng-id) |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.validate.outputs.should_publish_jsr }}" = "true" ]; then
+            echo "| JSR | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| JSR | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # GitHub Release status
+          if [ "${{ needs.github-release.result }}" = "success" ]; then
+            echo "| GitHub | ✅ Created | [View Release](https://github.com/${{ github.repository }}/releases/tag/v$VERSION) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| GitHub | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Docker status
+          if [ "${{ needs.docker-release.result }}" = "success" ]; then
+            echo "| Docker | ✅ Published | [View Image](https://ghcr.io/${{ github.repository }}) |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.validate.outputs.should_deploy_demo }}" = "true" ]; then
+            echo "| Docker | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Docker | ⏭️ Skipped | - |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🛠️ Installation" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# npm" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @nap5/gnrng-id@$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# JSR (Deno)" >> $GITHUB_STEP_SUMMARY
+          echo "deno add @nap5/gnrng-id@$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

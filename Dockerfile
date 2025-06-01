@@ -1,4 +1,5 @@
-# Multi-stage build for Rust WASM + React application
+# Multi-stage build for @nap5/gnrng-id library + React demo application
+# Stage 1: Rust WASM Builder
 FROM rust:1.86-slim as rust-builder
 
 # Install system dependencies for Rust/WASM build
@@ -6,7 +7,9 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Install wasm-pack
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
@@ -24,12 +27,18 @@ RUN rustup target add wasm32-unknown-unknown
 # Copy WASM source code
 COPY packages/crates/ ./packages/crates/
 
-# Build WASM packages with locked dependencies
-RUN wasm-pack build packages/crates/wasm-math --target web --scope internal --release && \
-    wasm-pack build packages/crates/wasm-text --target web --scope internal --release && \
-    wasm-pack build packages/crates/wasm-utils --target web --scope internal --release
+# Build WASM package with locked dependencies for production
+RUN wasm-pack build packages/crates/gnrng-id \
+    --target web \
+    --scope nap5 \
+    --release \
+    --out-dir pkg
 
-# Node.js build stage
+# Verify WASM build output
+RUN ls -la packages/crates/gnrng-id/pkg/ && \
+    echo "WASM build completed successfully"
+
+# Stage 2: Node.js Builder
 FROM node:22.11.0-slim as node-builder
 
 # Install pnpm
@@ -38,51 +47,68 @@ RUN npm install -g pnpm@10.11.0
 # Set working directory
 WORKDIR /app
 
-# Copy package configuration files
+# Copy package configuration files first (for better caching)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/app/package.json ./packages/app/
 COPY packages/utils/package.json ./packages/utils/
+COPY packages/lib/package.json ./packages/lib/
 COPY packages/shared-config/package.json ./packages/shared-config/
 
 # Copy shared configuration
 COPY packages/shared-config/ ./packages/shared-config/
 
 # Copy WASM packages from rust-builder stage
-COPY --from=rust-builder /app/packages/crates/wasm-math/pkg/ ./packages/crates/wasm-math/pkg/
-COPY --from=rust-builder /app/packages/crates/wasm-text/pkg/ ./packages/crates/wasm-text/pkg/
-COPY --from=rust-builder /app/packages/crates/wasm-utils/pkg/ ./packages/crates/wasm-utils/pkg/
+COPY --from=rust-builder /app/packages/crates/gnrng-id/pkg/ ./packages/crates/gnrng-id/pkg/
 
 # Install dependencies with frozen lockfile
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --shamefully-hoist
 
 # Copy source code
 COPY packages/utils/ ./packages/utils/
+COPY packages/lib/ ./packages/lib/
 COPY packages/app/ ./packages/app/
 
-# Build utils package
-RUN pnpm --filter @internal/utils build
+# Build packages in dependency order
+RUN echo "Building @internal/utils..." && \
+    pnpm --filter @internal/utils build && \
+    echo "Building @nap5/gnrng-id..." && \
+    pnpm --filter @nap5/gnrng-id build && \
+    echo "Building React app..." && \
+    pnpm --filter app build
 
-# Build React application
-RUN pnpm --filter app build
+# Verify build outputs
+RUN echo "Build verification:" && \
+    ls -la packages/utils/dist/ && \
+    ls -la packages/lib/dist/ && \
+    ls -la packages/app/dist/ && \
+    echo "All builds completed successfully"
 
-# Production runtime stage
+# Stage 3: Production Runtime
 FROM node:22.11.0-alpine as runtime
 
-# Install serve globally for SPA hosting
-RUN npm install -g serve@14
+# Install serve and security updates
+RUN apk add --no-cache \
+    curl \
+    wget \
+    ca-certificates \
+    && npm install -g serve@14 \
+    && npm cache clean --force
 
 # Create app user for security
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S -u 1001 -G nodejs nextjs
+    adduser -S -u 1001 -G nodejs appuser
 
 # Set working directory
 WORKDIR /app
 
 # Copy built application from node-builder stage
-COPY --from=node-builder --chown=nextjs:nodejs /app/packages/app/dist/ ./dist/
+COPY --from=node-builder --chown=appuser:nodejs /app/packages/app/dist/ ./dist/
+
+# Create logs directory
+RUN mkdir -p /app/logs && chown appuser:nodejs /app/logs
 
 # Switch to non-root user
-USER nextjs
+USER appuser
 
 # Expose port
 EXPOSE 3000

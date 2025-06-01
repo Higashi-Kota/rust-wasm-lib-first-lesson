@@ -3,7 +3,6 @@
 [![npm version](https://badge.fury.io/js/@nap5%2Fgnrng-id.svg)](https://badge.fury.io/js/@nap5%2Fgnrng-id)
 [![JSR](https://jsr.io/badges/@nap5/gnrng-id)](https://jsr.io/@nap5/gnrng-id)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson/actions/workflows/ci.yml/badge.svg)](https://github.com/Higashi-Kota/rust-wasm-lib-first-lesson/actions/workflows/ci.yml)
 
 **GNRNG (Good Night Random Number Generator)** with ID generation utilities powered by **WebAssembly** and **Rust**.
 
@@ -16,20 +15,9 @@ High-performance, deterministic random number generation and ID utilities for mo
 - 🆔 **ID Generation**: Safe, collision-resistant ID creation
 - 📦 **Dual Publishing**: Available on both npm and JSR
 - 🌐 **Universal**: Works in Node.js, Deno, and browsers
-- ⚡ **Fast**: Significantly faster than pure JavaScript implementations
+- ⚡ **Fast**: Batch operations for optimal FFI performance
 - 🔧 **Type Safe**: Full TypeScript support with generated types
 - 🧪 **Well Tested**: Comprehensive test suite with benchmarks
-
-## 📋 Table of Contents
-
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [API Reference](#-api-reference)
-- [Performance](#-performance)
-- [Examples](#-examples)
-- [Compatibility](#-compatibility)
-- [Development](#-development)
-- [License](#-license)
 
 ## 🚀 Installation
 
@@ -78,29 +66,22 @@ const randomInt = rng.nextRange(1, 100) // 1 ~ 99
 rng.free() // Clean up WASM memory
 ```
 
-### Auto-initialization API
-
-For convenience, use the `auto` namespace to automatically initialize WASM:
+### Batch Operations (High Performance)
 
 ```typescript
-import { auto } from '@nap5/gnrng-id'
-
-// These functions automatically initialize WASM on first call
-const id = await auto.createId()
-const seededId = await auto.createIdBySeed('seed')
-const rng = await auto.gnrng('seed')
-const uniqueName = await auto.getName('Panel', ['Panel', 'Panel (1)'])
-```
-
-### Unique Name Generation
-
-```typescript
-import { getName } from '@nap5/gnrng-id'
+import { initWasm, createIdsBySeed, Gnrng, IdType } from '@nap5/gnrng-id'
 
 await initWasm()
 
-const existingNames = ['Panel', 'Panel (1)', 'Panel (2)']
-const uniqueName = getName('Panel', existingNames) // "Panel (3)"
+// Batch ID generation (much faster than individual calls)
+const userIds = createIdsBySeed('user-batch', 1000, 8, IdType.User)
+console.log(userIds.length) // 1000 unique user IDs
+
+// Batch random number generation
+const rng = new Gnrng('batch-seed')
+const randomNumbers = rng.nextBatch(10000) // 10k numbers at once
+const diceRolls = rng.nextRangeBatch(1, 6, 1000) // 1k dice rolls
+rng.free()
 ```
 
 ## 📚 API Reference
@@ -109,33 +90,10 @@ const uniqueName = getName('Panel', existingNames) // "Panel (3)"
 
 #### `initWasm(): Promise<void>`
 
-Initialize the WebAssembly module. Must be called before using any other functions (except `auto.*` functions).
+Initialize the WebAssembly module. Must be called before using any other functions.
 
 ```typescript
 await initWasm()
-```
-
-### ID Generation
-
-#### `createId(size?: number, type?: IdType): string`
-
-Generate a random ID with optional size and type prefix.
-
-- `size`: Length of random part (default: 7)
-- `type`: ID type for prefix (default: `IdType.Default`)
-
-```typescript
-createId() // "t_A7Bp9X2"
-createId(10, IdType.User) // "u_K3mN9Pq5vB"
-```
-
-#### `createIdBySeed(seed: string, size?: number, type?: IdType): string`
-
-Generate a deterministic ID based on seed.
-
-```typescript
-createIdBySeed('my-seed') // Always returns same result
-createIdBySeed('project-alpha', 8, IdType.Project) // "p_X9kM2nQ8"
 ```
 
 ### Random Number Generation
@@ -153,6 +111,10 @@ const value = rng.next()
 // Generate integer [min, max)
 const intValue = rng.nextRange(1, 100)
 
+// 🚀 Batch operations (high performance)
+const batch = rng.nextBatch(1000)              // 1000 floats
+const rangeBatch = rng.nextRangeBatch(1, 10, 500) // 500 integers [1, 10)
+
 // Clean up (important for memory management)
 rng.free()
 ```
@@ -165,14 +127,23 @@ Factory function to create Gnrng instance.
 const rng = gnrng('my-seed')
 ```
 
-### Utility Functions
+### ID Generation
 
-#### `getName(baseName: string, existingNames: string[]): string`
+#### `createIdBySeed(seed: string, size?: number, type?: IdType): string`
 
-Generate unique name avoiding conflicts.
+Generate a deterministic ID based on seed.
 
 ```typescript
-getName('Panel', ['Panel', 'Panel (1)']) // "Panel (2)"
+createIdBySeed('my-seed') // "t_A7Bp9X2"
+createIdBySeed('user-123', 8, IdType.User) // "u_K3mN9Pq5"
+```
+
+#### `🚀 createIdsBySeed(baseSeed: string, count: number, size?: number, type?: IdType): string[]`
+
+Generate multiple deterministic IDs efficiently (batch operation).
+
+```typescript
+createIdsBySeed('user-batch', 100, 8, IdType.User) // 100 unique user IDs
 ```
 
 ### Types
@@ -190,38 +161,19 @@ enum IdType {
 }
 ```
 
-### Async API
-
-All functions have async variants that auto-initialize WASM:
-
-```typescript
-import { createIdAsync, createIdBySeedAsync, gnrngAsync } from '@nap5/gnrng-id'
-
-const id = await createIdAsync()
-const seededId = await createIdBySeedAsync('seed')
-const rng = await gnrngAsync('seed')
-```
-
 ## ⚡ Performance
+TBD
 
-WASM implementation provides significant performance improvements over pure JavaScript:
+- 個別より、バッチ実行の方が基本早い
+- gnrngはバッチサイズ大きいほど有利で早い
+- createIdはバッチサイズが小さい（100個ほど）とNativeの方が早く、バッチサイズが大きい（1000個以上）とwasmの方が早い
 
-| Operation | JavaScript | WASM (Rust) | Improvement |
-|-----------|------------|-------------|-------------|
-| GNRNG Generation (10K) | ~45ms | ~8ms | **5.6x faster** |
-| ID Creation (1K) | ~12ms | ~3ms | **4x faster** |
-| Seeded ID (1K) | ~15ms | ~4ms | **3.7x faster** |
-| Name Generation | ~2ms | ~0.5ms | **4x faster** |
+### Performance Tips
 
-*Benchmarks run on Node.js 22 on Apple M1 Pro*
-
-### Running Benchmarks
-
-```bash
-npm run benchmark
-# or
-deno task bench
-```
+✅ **Use batch operations** for processing many items  
+✅ **Initialize WASM once** at application startup  
+✅ **Call `rng.free()`** to avoid memory leaks  
+✅ **Prefer deterministic IDs** for reproducible results  
 
 ## 📖 Examples
 
@@ -229,7 +181,7 @@ deno task bench
 
 ```typescript
 import { useEffect, useState } from 'react'
-import { initWasm, createId } from '@nap5/gnrng-id'
+import { initWasm, createId, IdType } from '@nap5/gnrng-id'
 
 function useGnrngId() {
   const [initialized, setInitialized] = useState(false)
@@ -251,21 +203,25 @@ function useGnrngId() {
 
 ```typescript
 import express from 'express'
-import { initWasm, createIdBySeed, IdType } from '@nap5/gnrng-id'
+import { initWasm, createIdsBySeed, IdType } from '@nap5/gnrng-id'
 
 const app = express()
 
 // Initialize WASM on startup
 await initWasm()
 
-app.post('/api/users', (req, res) => {
-  const userId = createIdBySeed(
-    `user-${Date.now()}-${Math.random()}`,
+app.post('/api/users/batch', (req, res) => {
+  const { count = 100 } = req.body
+  
+  // Generate batch of user IDs efficiently
+  const userIds = createIdsBySeed(
+    `batch-${Date.now()}`,
+    count,
     8,
     IdType.User
   )
   
-  res.json({ id: userId })
+  res.json({ userIds })
 })
 ```
 
@@ -273,14 +229,19 @@ app.post('/api/users', (req, res) => {
 
 ```typescript
 import { serve } from 'https://deno.land/std/http/server.ts'
-import { auto } from 'jsr:@nap5/gnrng-id'
+import { initWasm, Gnrng } from 'jsr:@nap5/gnrng-id'
 
-serve(async (req) => {
+await initWasm()
+
+serve((req) => {
   const url = new URL(req.url)
   
-  if (url.pathname === '/id') {
-    const id = await auto.createId()
-    return new Response(JSON.stringify({ id }))
+  if (url.pathname === '/random-batch') {
+    const rng = new Gnrng('server-seed')
+    const numbers = rng.nextBatch(1000)
+    rng.free()
+    
+    return new Response(JSON.stringify({ numbers }))
   }
   
   return new Response('Not Found', { status: 404 })
@@ -303,28 +264,14 @@ serve(async (req) => {
 - ✅ **TypeScript**
 - ✅ **JSR** (Deno registry)
 
-### Migration from `@internal/utils`
-
-This library is designed to be a drop-in replacement:
-
-```typescript
-// Before (TypeScript implementation)
-import { createId, createIdBySeed, gnrng, getName } from '@internal/utils'
-
-// After (WASM implementation)
-import { createId, createIdBySeed, gnrng, getName, initWasm } from '@nap5/gnrng-id'
-
-await initWasm() // Only addition needed
-```
-
 ## 🛠️ Development
 
 ### Prerequisites
 
 - Rust 1.86.0+
-- Node.js 18+
+- Node.js 22+
 - wasm-pack
-- pnpm 8+
+- pnpm 10+
 
 ### Building
 
@@ -352,16 +299,6 @@ pnpm run benchmark
 pnpm run test:coverage
 ```
 
-### Releasing
-
-```bash
-# Release to npm
-pnpm run publish:npm
-
-# Release to JSR
-pnpm run publish:jsr
-```
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please see our [Contributing Guide](../../CONTRIBUTING.md) for details.
@@ -374,7 +311,7 @@ Contributions are welcome! Please see our [Contributing Guide](../../CONTRIBUTIN
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](../../LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
