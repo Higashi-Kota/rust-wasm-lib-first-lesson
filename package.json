@@ -51,8 +51,8 @@
     "benchmark:lib": "pnpm --filter @nap5/gnrng-id benchmark",
     
     "setup": "pnpm run setup:full",
-    "setup:full": "pnpm run clean:wasm && pnpm run build:wasm && pnpm install --shamefully-hoist && pnpm run install:check",
-    "setup:quick": "pnpm run build:wasm && pnpm install",
+    "setup:full": "pnpm run clean:wasm && pnpm run build:wasm && pnpm install --shamefully-hoist && pnpm run build:lib && pnpm run install:check",
+    "setup:quick": "pnpm run build:wasm && pnpm install && pnpm run build:lib",
     "install:all": "pnpm run setup:quick",
     "install:check": "pnpm list --depth=1",
     

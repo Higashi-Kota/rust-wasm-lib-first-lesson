@@ -14,7 +14,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
-    exclude: ['lucide-react', '@internal/utils'],
+    exclude: ['lucide-react', '@internal/utils', '@nap5/gnrng-id-wasm'],
   },
   // ビルド設定
   build: {
@@ -34,5 +34,14 @@ export default defineConfig({
     watch: {
       ignored: ['!**/packages/crates/**/pkg/**'],
     },
+    // MIMEタイプの設定を追加
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+    // 静的ファイルのMIMEタイプ設定
+    middlewareMode: false,
   },
+  // アセット設定
+  assetsInclude: ['**/*.wasm'],
 })

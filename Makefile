@@ -33,6 +33,7 @@ setup-quick:
 	@echo "Quick setup..."
 	make build-wasm-dev
 	pnpm install
+	make build-lib
 	@echo "Quick setup completed!"
 
 # 開発サーバーの起動（要concurrently）
@@ -43,6 +44,7 @@ dev:
 # ライブラリのビルド
 build-lib:
 	@echo "Building TypeScript library..."
+	pnpm --filter @internal/utils build
 	pnpm --filter @nap5/gnrng-id build
 	@echo "Library built successfully!"
 

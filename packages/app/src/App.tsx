@@ -65,7 +65,7 @@ function App() {
                     npm install @nap5/gnrng-id
                   </code>
                   <code className="block p-2 text-sm text-green-400 bg-black rounded">
-                    deno add @nap5/gnrng-id
+                    deno add npm:@nap5/gnrng-id
                   </code>
                 </div>
               </div>

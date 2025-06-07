@@ -5,7 +5,9 @@
 ```bash
 $ make clean-all
 $ make setup
+
 $ pnpm dev
+$ pnpm dev:watch
 ```
 
 ## build
